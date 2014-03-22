@@ -6,7 +6,8 @@ require "jekyll"
 
 
 # Change your GitHub reponame
-GITHUB_REPONAME = "calebwoods/calebwoods.github.io"
+GITHUB_REPONAME = 'calebwoods/calebwoods.github.io'
+CNAME = 'calebwoods.com'
 
 
 desc "Generate blog files"
@@ -26,6 +27,7 @@ task :publish => [:generate] do
     pwd = Dir.pwd
     Dir.chdir tmp
 
+    system "echo #{CNAME} > CNAME"
     system "git init"
     system "git add ."
     message = "Site updated at #{Time.now.utc}"
