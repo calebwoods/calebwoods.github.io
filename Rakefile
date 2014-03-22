@@ -28,6 +28,12 @@ task :publish => [:generate] do
     Dir.chdir tmp
 
     system "echo #{CNAME} > CNAME"
+
+    # Remove system files
+    system "rm Gemfile*"
+    system "rm Rakefile"
+
+    # Create git repo
     system "git init"
     system "git add ."
     message = "Site updated at #{Time.now.utc}"
