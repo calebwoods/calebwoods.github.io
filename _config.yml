@@ -1,7 +1,9 @@
 name: Caleb Woods
 description: Personal site of Caleb Woods
-url: http://calebwoods.com
+url: http://www.calebwoods.com
+permalink: pretty
 markdown: redcarpet
 highlighter: pygments
+exclude: ["Gemfile", "Gemfile.lock", "Rakefile"]
 sass:
   sass_dir: _sass

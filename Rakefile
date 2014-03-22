@@ -29,10 +29,6 @@ task :publish => [:generate] do
 
     system "echo #{CNAME} > CNAME"
 
-    # Remove system files
-    system "rm Gemfile*"
-    system "rm Rakefile"
-
     # Create git repo
     system "git init"
     system "git add ."
