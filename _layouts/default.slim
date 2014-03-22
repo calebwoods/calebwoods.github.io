@@ -7,23 +7,28 @@ html
       | {{ page.title }}
     meta name="viewport" content="width=device-width"
 
+    link rel="stylesheet" href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700"
     link rel="stylesheet" href="/css/syntax.css"
     link rel="stylesheet" href="/css/main.css"
 
-  body
-    .site
-      .header
-        h1.title
-          a href="/"
-            | {{ site.name }}
-          a class="extra" href="/" home
-          a class="extra" href="#contact" contact
+    link href='/feed.xml' rel='alternate' type='application/atom+xml'
 
+  body
+    .header
+      .overlay
+        .site
+          h1.title
+            .avatar
+            a href="/"
+              | {{ site.name }}
+          a class="extra" href="/feed.xml" feed
+          a class="extra" href="#contact" contact
+    .site
       | {{ content }}
 
       div#contact.footer
-        div.contact
-          img src="https://www.gravatar.com/avatar/db4a1b791b343cc067384b8b44012861?s=100"
+        p
+          | &copy; 2013 - 2014 Caleb Woods. All Right Reserved.
         div.contact
           p
             span Caleb Woods

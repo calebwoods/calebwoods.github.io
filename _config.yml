@@ -1,4 +1,6 @@
 name: Caleb Woods
+description: Personal site of Caleb Woods
+url: http://calebwoods.com
 markdown: redcarpet
 highlighter: pygments
 sass:
