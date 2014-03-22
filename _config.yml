@@ -1,0 +1,5 @@
+name: Caleb Woods
+markdown: redcarpet
+highlighter: pygments
+sass:
+  sass_dir: _sass
