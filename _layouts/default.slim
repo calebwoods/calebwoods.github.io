@@ -1,0 +1,36 @@
+doctype html
+html
+  head
+    meta charset="utf-8"
+    meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"
+    title
+      | {{ page.title }}
+    meta name="viewport" content="width=device-width"
+
+    link rel="stylesheet" href="/css/syntax.css"
+    link rel="stylesheet" href="/css/main.css"
+
+  body
+    .site
+      .header
+        h1.title
+          a href="/"
+            | {{ site.name }}
+          a class="extra" href="/" home
+          a class="extra" href="#contact" contact
+
+      | {{ content }}
+
+      div#contact.footer
+        div.contact
+          img src="https://www.gravatar.com/avatar/db4a1b791b343cc067384b8b44012861?s=100"
+        div.contact
+          p
+            span Caleb Woods
+            span Software Craftsman
+            span caleb@calebwoods.com
+        div.contact
+          p
+            a href="https://github.com/calebwoods"github.com/calebwoods
+            a href="https://twitter.com/calebwoods"twitter.com/calebwoods
+            a href="https://www.linkedin.com/in/calebwoods" linkedin.com/in/calebwoods

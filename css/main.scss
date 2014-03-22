@@ -116,25 +116,30 @@ a:visited { color: #a0a; }
   margin-top: 2em;
   padding-top: 2em;
   overflow: hidden;
-}
 
-.footer .contact {
-  float: left;
-  margin-right: 3em;
-}
+  .contact {
+    float: left;
+    margin-right: 3em;
 
-.footer .contact a {
-  color: #8085C1;
-}
+    a {
+      color: #8085C1;
+      display: block;
+    }
 
-.footer .rss {
-  margin-top: 1.1em;
-  margin-right: -.2em;
-  float: right;
-}
+    span {
+      display: block;
+    }
+  }
 
-.footer .rss img {
-  border: 0;
+  .rss {
+    margin-top: 1.1em;
+    margin-right: -.2em;
+    float: right;
+  }
+
+  .rss img {
+    border: 0;
+  }
 }
 
 /*****************************************************************************/
