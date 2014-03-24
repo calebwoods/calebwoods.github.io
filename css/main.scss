@@ -69,30 +69,37 @@ a:visited { color: $blue; }
     width: 100px;
   }
 
-    .article-title {
-      font-size: 125%;
-      color: $blue;
-      font-weight: 700;
-    }
+  .article-title {
+    font-size: 125%;
+    color: $blue;
+    font-weight: 700;
+  }
 
-    .article-source {
-      display: block;
-      font-style: italic;
-      color: $gray;
-    }
+  .article-source {
+    display: block;
+    font-style: italic;
+    color: $gray;
+  }
 
-    a {
-      display: block;
-      text-decoration: none;
+  a {
+    display: block;
+    text-decoration: none;
 
-      &:hover {
-        .article-date { color: $darkgray; }
-        .article-title {
-          color: lighten($blue, 10%);
-        }
+    &:hover {
+      .article-date { color: $darkgray; }
+      .article-title {
+        color: lighten($blue, 10%);
       }
     }
   }
+}
+
+@media screen and (max-width: 1024px) {
+  .article-index .article-date {
+    text-align: left;
+    margin-left: 0px;
+  }
+}
 
 /*****************************************************************************/
 /*
