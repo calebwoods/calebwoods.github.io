@@ -1,12 +1,12 @@
 ---
 layout: post
-title:  Static Lists: Database Table, Module, or Enums
+title:  "Static Lists: Database Table, Module, or Enums"
 date:   2014-04-03 20:00:00
 ---
 
 In my expiriene of building web applications there has been the need for a pattern to solve the problem of static lists. By static lists I mean things like: US States, name prefixes, roles, etc.
 
-For comparison we'll look at three solution to solve this problem for a Rails app. Our example will a Person object with a list of greetings options: Hi, Hello, Dear.
+For comparison we'll look at three solutions to solve this problem for a Rails app. Our example will a Person object with a list of greetings options: Hi, Hello, Dear.
 
 ```ruby
 class Person < ActiveRecord::Base
@@ -42,7 +42,7 @@ end
 #### Cons
 
 * Person tests will require Greeting object to be created
-* Displaying form options from table would be another query
+* Displaying form options requires database query
 
 ### Module
 
@@ -138,7 +138,9 @@ Using the new ActiveRecord enums has the advantage of creating dynamic methods l
 To use these enums in a form helper we can do a map of the hash we get from the `Person.greetings` method.
 
 ```ruby
-Person.greetings.map { |greeting, id| [greeting.capitalize, id] }
+Person.greetings.map do |greeting, id|
+  [greeting.capitalize, id]
+end
 ```
 
 This solution ends up being the smallest amount of code although we've have the convience of our form helper being defined in just one place, but that could be addressed with custom class methods.

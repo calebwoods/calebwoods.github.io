@@ -199,6 +199,10 @@ a:visited { color: $blue; }
 /*
 /*****************************************************************************/
 
+.post h3, .post h4 {
+  margin-top: 40px;
+}
+
 /* standard */
 .post pre {
   border: 1px solid #ddd;
