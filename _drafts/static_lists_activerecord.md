@@ -1,10 +1,12 @@
 ---
 layout: post
-title:  Static Lists with ActiveRecord
-date:   2014-04-02 10:58:54
+title:  Static Lists: Database Table, Module, or Enums
+date:   2014-04-03 20:00:00
 ---
 
-In the dozens of web applications I've built there seems to be a common pattern with an evolving solution, static lists. These could be thinking like States for address, name prefixes, user roles. I'd like to take a look at three solution to solve this problem for a Rails app.  For the purposes of this post we'll use the example of a Person object with a list of greetings: Hi, Hello, Dear, Other.
+In my expiriene of building web applications there has been the need for a pattern to solve the problem of static lists. By static lists I mean things like: US States, name prefixes, roles, etc.
+
+For comparison we'll look at three solution to solve this problem for a Rails app. Our example will a Person object with a list of greetings options: Hi, Hello, Dear.
 
 ```ruby
 class Person < ActiveRecord::Base
@@ -13,7 +15,7 @@ end
 
 ### Database Table
 
-In a Rails app adding new table is any easy thing to do and make adding new greetings to list very straight forward. If we implemented a Greeting ActiveRecord object we might end up with some code like this.
+In a Ruby on Rails application adding new database table is an easy thing and make adding new greetings to list very straight forward. If we implemented a Greeting ActiveRecord object we might end up with some code like this.
 
 ```ruby
 # app/models/person.rb
@@ -22,7 +24,7 @@ class Person < ActiveRecord::Base
 
   validates :greeting, presence: true
 
-  delegate :value, to: greeting, prefix: true
+  delegate :value, to: :greeting, prefix: true
 end
 
 # app/models/greeting.rb
@@ -33,19 +35,20 @@ class Greeting < ActiveRecord::Base
 end
 ```
 
-Simple enough to implement, so what are the pro/cons on this solution.
+#### Pros
+* Easy to implement
+* Add more greetings without redeploying app
 
-* Pros
-  * Easy to implement
-  * Add more greetings without redeploying app
-* Cons
-  * Person tests will require Greeting object to be created
-  * Displaying form options from table would be another query
-  * Other option is not yet supported
+#### Cons
+
+* Person tests will require Greeting object to be created
+* Displaying form options from table would be another query
 
 ### Module
 
-This concept of a greeting and it's related validations is really a single concept and would be nice to issolate it's implementation in case was need else where. Also because this list is not expected to change much if ever we like to not have to query the database to get the list or the display the value set on Person.
+The concept of a greeting and it's associated validations is really a discreet concept and it would be nice to isolate it's implementation from our `Person` class.
+
+This list is not expected to change much if ever we like to not have to query the database to get the list of greetings or the display the value for a `Person` instance.
 
 ```ruby
 # app/models/person.rb
@@ -94,26 +97,33 @@ module Greeting
 end
 ```
 
-This is admititly more code, but we've also got some more features. In this version we've implement support for an `greeting_other` database column which could custom greetings entered by user. We've also added the `FormOptions` constant which can be used in a form builder to build dropdown options. Most importantly we make zero database calls to get these values which means faster tests and application. In addtion because we are storing ids on Person object it would straight forward to move the Database Table pattern if needed in the future.
+This solution is admittedly more code, but we've also got some more features. In this version we've implement support for an `greeting_other` database column which could store custom greetings entered by user.
 
-* Pros
-  * No database queries
-  * Easier test setup
-  * Supports form builders
-  * Used with any ORM
-  * Easy to convert to table
-  * Support `Other` option
-* Cons
-  * Changes require redeploying application
-  * More lines of code
+We've also added the `FormOptions` constant which can be used in a form builder to build select with the valid values for a greeting. Most importantly we make zero database calls to get these values which means faster tests with less setup and less load in our application. Speaking of testing, this "Module" I've found is a great place to [Rspec shared_examples](https://www.relishapp.com/rspec/rspec-core/docs/example-groups/shared-examples).
+
+Because we are storing our reference to a greeting in a `greeting_id` on the Person table it would straight forward to move the "Database Table" pattern in the future.
+
+#### Pros
+
+* No database queries
+* Easier test setup
+* Supports form builders
+* Used with any ORM
+* Easy to convert to table
+* Support `Other` option
+
+#### Cons
+
+* Changes require redeploying application
+* More lines of code
 
 ### Enums
 
-The module pattern I've shown above is similar to the [enum](http://en.wikipedia.org/wiki/Enumerated_type) support that many programming languages have. While Ruby doesn't have native support enums it's a new [feature](http://edgeguides.rubyonrails.org/4_1_release_notes.html#active-record-enums) in Rails 4.1. Let's take a look at what implemenation using enum would look like.
+The module pattern I've shown above is similar to the [enum](http://en.wikipedia.org/wiki/Enumerated_type) support that many programming languages have built in to the language. While Ruby doesn't have native support enums a new [feature](http://edgeguides.rubyonrails.org/4_1_release_notes.html#active-record-enums) in Rails 4.1 gives us an implement of enums to use with ActiveRecord.
 
 ```ruby
 class Person < ActiveRecord::Base
-  enum greeting: [ :hi, :hello, :dear ]
+  enum greeting: { hi: 1, hello: 2, dear: 3 }
 
   validates :greeting, presence: true
 
@@ -123,17 +133,33 @@ class Person < ActiveRecord::Base
 end
 ```
 
-Using the new ActiveRecord enums has the advantage of creating dynimic like `hi!` and `hi?` to set and check the value. Unfortunately I'm not seeing form helper integration in 4.1.0.rc2. However this is a very small about of code to have to write and our `greeting_value` method is only a convience to make value look correct in a UI.
+Using the new ActiveRecord enums has the advantage of creating dynamic methods like `hi!` and `hi?` to set the value of `greeting` and check the value matches a specific enum value.
 
-* Pros
-  * Simple implementation
-  * Dynamic method creation
-  * No database queries
-* Cons
-  * Change require redeploying application
-  * No form builder support
+To use these enums in a form helper we can do a map of the hash we get from the `Person.greetings` method.
+
+```ruby
+Person.greetings.map { |greeting, id| [greeting.capitalize, id] }
+```
+
+This solution ends up being the smallest amount of code although we've have the convience of our form helper being defined in just one place, but that could be addressed with custom class methods.
+
+#### Pros
+
+* Simple implementation
+* Dynamic method creation
+* No database queries
+
+#### Cons
+
+* Change require redeploying application
+* No form builder support
 
 ### Conclusion
 
-As compare these options they each have situation where they shine. A database table is create to make changes fast, the module pattern is flexible with good support of intraspection, enums is simple and gives short cut methods. With that said I've found that module pattern is a good place, however, I'll be curious to see how [ActiveRecord enums](http://edgeguides.rubyonrails.org/4_1_release_notes.html#active-record-enums) evolves over time. If you'd like to compare these implementation in more depth I've put together a [sample app](https://github.com/calebwoods/static_lists_post) with tests.
+As we've compared these patterns for solving our static lists we can see that there are contexts where each solution will shine.
 
+A "Database Table" is easy create and allows live changes, the "Module" pattern is flexible with good support for introspection and exstending with blocks, and ActiveRecord enums is a simple solution with good support representing states of an object.
+
+With that said I've found that the "Module" pattern is a good place to start when solving this problem, however, I'll be curious to see how [ActiveRecord enums](http://edgeguides.rubyonrails.org/4_1_release_notes.html#active-record-enums) evolves over time and look forward to trying it on a project.
+
+If you'd like to compare these implementations in more depth I've put together a [sample app](https://github.com/calebwoods/static_lists_post) which includes tests for each solution.
