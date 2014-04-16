@@ -164,3 +164,7 @@ A "Database Table" is easy to create and allows live changes, the "Module" patte
 With that said, I have found that the "Module" pattern is a good place to start, however, I'll be curious to see how [ActiveRecord enums](http://edgeguides.rubyonrails.org/4_1_release_notes.html#active-record-enums) evolves over time and look forward to trying it on a project.
 
 If you would like to compare these implementations in more depth I have put together a [sample app](https://github.com/calebwoods/static_lists_post) which includes tests for each solution.
+
+---
+
+**Edit** in response to this blog post, [@ravinggenius](https://twitter.com/ravinggenius) put together a [gist](https://gist.github.com/ravinggenius/9983704) of how you could build an abstraction to simplify "Module" pattern and reduce boiler plate code. This could probably be taken a bit further to also create helper methods like ActiveRecord enums provides.
