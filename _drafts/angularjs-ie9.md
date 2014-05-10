@@ -6,7 +6,7 @@ date:   2014-03-22 10:58:54
 
 In this post I'll share an example on a recent Angular.js application I worked on which needed to support Internet Explorer 9 and connect to multiple remote APIs.
 
-The issue with this setup is that by default browers prevent any Javascript on the page from making requests to another domain. This is done to prevent [Cross Site Scripting]()**. While this is a good safety measure as application developers it can be common to have a backend API hosted a subdomain such as `api.example.com` and have the frontend Javascript application hosted on separate domain like `frontend.example.com`.
+The issue with this setup is that by default browser prevent any Javascript on the page from making requests to another domain. This is done to prevent [Cross Site Scripting]()**. While this is a good safety measure as application developers it can be common to have a backend API hosted a subdomain such as `api.example.com` and have the frontend Javascript application hosted on separate domain like `frontend.example.com`.
 
 ### JSONP
 
@@ -22,41 +22,70 @@ Internet Explorer 9 and below, however, do not support CORS which for our exampl
 
 ### Proxies
 
-A server side proxy for our API however allows us to solve this issue. With a proxy can let the server forward requests to the other subdomain and to the browers it looks like it is calling the same server.
+A server side proxy for our API however allows us to solve this issue. With a proxy can let the server forward requests to the other subdomain and to the browser it looks like it is calling the same server.
 
 This means we could have a request like `frontend.example.com/api/items.json` forwarded to `api.example.com/items.json`. Which will work for us it all browsers.
 
 ### Development
 
-Grunt Proxy
+In development setting up your proxy is pretty simple using grunt-connect-proxy. You will just need to add proxy section to your `Gruntfile.js` similar to the below example.
+
+```js
+connect: {
+    ...
+    server: {
+        proxies: [
+            {
+                context: '/api1',
+                host: 'localhost',
+                port: 4000,
+                https: false,
+                changeOrigin: false,
+                rewrite: {
+                    '^/api1': ''
+                }
+            },
+            {
+                context: '/api2',
+                host: 'localhost',
+                port: 4100,
+                https: false,
+                changeOrigin: false,
+                rewrite: {
+                    '^/api2': ''
+                }
+            }
+        ]
+    }
+}
+```
+
+For more information on options with grunt-connect-proxy check [this](http://fettblog.eu/blog/2013/09/20/using-grunt-connect-proxy/) blog post.
 
 ### Production
 
-Nginx
+We deployed our Angular application with Nginx as a web server to serve static files. In addition to static files, Nginx has great support to proxy to other web servers.  For our APIs we just need add some location directives to `nginx.conf` file like the example below.
 
-### Multiple Proxies
+```nginx
+location /api1 {
+  rewrite ^/api1/(.*) /$1 break;
+  proxy_redirect off;
+  proxy_pass https://api1.example.com;
+  ...
+}
 
+location /api2 {
+  rewrite ^/api2/(.*) /$1 break;
+  proxy_redirect off;
+  proxy_pass https://api2.example.com;
+  ...
+}
+```
 
-### When well
+To see a full example of the Nginx config take a look at [this gist](https://gist.github.com/calebwoods/5e88b5e323d55ad71195).
 
-* HTML5 mode fallback worked great, link between browsers work
-* Microsoft VMs to test versions
-  * alias 10.0.2.2 to localhost
+### Take aways
 
-### Changes to make
+Decide on browsers to support early on in your project. Also make sure that you are running tests frequently in development and production with the browsers you will support.
 
-* Proxy APIs
-  * No CORS support
-  * Example nginx conf
-* File uploads
-  * flash fallback
-
-### Issues
-
-* Debugging random error messages
-  * Firebug lite
-
-### Future
-
-* Test sooner
-* Test on regular basis
+If on the Mac and developing to support Internet Explorer, I highly recomend checking out Microsofts collection of prebuilt [Virtual Machine images](http://www.modern.ie/en-us/virtualization-tools).
