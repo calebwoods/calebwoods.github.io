@@ -4,31 +4,31 @@ title:  "Angular.js, IE9, CORS, and Nginx"
 date:   2014-03-22 10:58:54
 ---
 
-In this post I'll share an example on a recent Angular.js application I worked on which needed to support Internet Explorer 9 and connect to multiple remote APIs.
+In this post I'll share an example of a recent Angular.js application I worked on which needed to support Internet Explorer 9 and connect to multiple remote APIs.
 
-The issue with this setup is that by default browser prevent any Javascript on the page from making requests to another domain. This is done to prevent [Cross Site Scripting]()**. While this is a good safety measure as application developers it can be common to have a backend API hosted a subdomain such as `api.example.com` and have the frontend Javascript application hosted on separate domain like `frontend.example.com`.
+The issue with this setup is that by default the browser prevents any Javascript on the page from making requests to another domain. This is done to prevent [Cross Site Scripting](http://en.wikipedia.org/wiki/Cross-site_scripting). While this is a good safety measure, as application developers it can be common to have a backend API hosted on a subdomain such as `api.example.com` and have the frontend Javascript application hosted on separate domain like `frontend.example.com` which cause an issue of how to connect to the API.
 
 ### JSONP
 
-[JSONP]()** is another option that many popular API expose for Javascript clients. With JSONP the server will respond with a Javascript body which includes function callback which was specified in the request. We should not that a JSONP only supports GET requests which is how it get around the Cross Site Scripting issue.
+[JSONP](http://en.wikipedia.org/wiki/JSONP) is an option that many popular APIs expose for Javascript clients. With JSONP, the server will respond with a Javascript body which includes a function callback as specified in the request. We should note that JSONP only supports GET requests, which is how it gets around the Cross Site Scripting issue.
 
-This works pretty well APIs that server Javascript client, but unfortunately it means you will have a different API format for mobile clients of API.
+This works pretty well with APIs that serve Javascript clients, but unfortunately it means you will have a different API format for mobile clients of the API.
 
 ### Cross Origin Request Sharing
 
-Thankfully there is a solution for modern browers called [Cross Origin Request Sharing]()** or CORS for short. CORS allows Javascript application to make requests to a server that returns the proper CORS headers.
+Thankfully there is a solution for modern browsers called [Cross Origin Request Sharing](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing), or CORS for short. CORS allows Javascript applications to make requests to a server that return the proper CORS headers.
 
-Internet Explorer 9 and below, however, do not support CORS which for our example is a problem.
+As it is, though, Internet Explorer 9 and below do not support CORS, which is a problem for our example.
 
 ### Proxies
 
-A server side proxy for our API however allows us to solve this issue. With a proxy can let the server forward requests to the other subdomain and to the browser it looks like it is calling the same server.
+A server side proxy for our API, however, does allow us to solve this issue. With a proxy we can let the server forward requests to the other subdomains, and to the browser it looks like it is calling the same server.
 
-This means we could have a request like `frontend.example.com/api/items.json` forwarded to `api.example.com/items.json`. Which will work for us it all browsers.
+This means we could have a request like `frontend.example.com/api/items.json` forwarded to `api.example.com/items.json`. And, this works in all browsers.
 
 ### Development
 
-In development setting up your proxy is pretty simple using grunt-connect-proxy. You will just need to add proxy section to your `Gruntfile.js` similar to the below example.
+In development, setting up your proxy is pretty simple using [grunt-connect-proxy](https://github.com/drewzboto/grunt-connect-proxy). You will just need to add proxy section to your `Gruntfile.js`, similar to the example below.
 
 ```js
 connect: {
@@ -60,11 +60,11 @@ connect: {
 }
 ```
 
-For more information on options with grunt-connect-proxy check [this](http://fettblog.eu/blog/2013/09/20/using-grunt-connect-proxy/) blog post.
+For more information on options with [grunt-connect-proxy](https://github.com/drewzboto/grunt-connect-proxy), check out [this](http://fettblog.eu/blog/2013/09/20/using-grunt-connect-proxy/) blog post.
 
 ### Production
 
-We deployed our Angular application with Nginx as a web server to serve static files. In addition to static files, Nginx has great support to proxy to other web servers.  For our APIs we just need add some location directives to `nginx.conf` file like the example below.
+We deployed our Angular application with Nginx as a web server to serve static files. In addition to static files, Nginx has great support to proxy to other web servers.  For our APIs we just need to add some location directives to the `nginx.conf` file like the example below.
 
 ```nginx
 location /api1 {
@@ -82,10 +82,10 @@ location /api2 {
 }
 ```
 
-To see a full example of the Nginx config take a look at [this gist](https://gist.github.com/calebwoods/5e88b5e323d55ad71195).
+To see a full example of the Nginx config, take a look at [this gist](https://gist.github.com/calebwoods/5e88b5e323d55ad71195).
 
-### Take aways
+### Take Aways
 
-Decide on browsers to support early on in your project. Also make sure that you are running tests frequently in development and production with the browsers you will support.
+Decide on which browsers to support early on in your project. Also make sure that you are running tests frequently in development and production with the browsers you will support.
 
-If on the Mac and developing to support Internet Explorer, I highly recomend checking out Microsofts collection of prebuilt [Virtual Machine images](http://www.modern.ie/en-us/virtualization-tools).
+If on the Mac and developing to support Internet Explorer, I highly recomend checking out Microsofts collection of prebuilt [Virtual Machine images](http://www.modern.ie/en-us/virtualization-tools) to use in testing.
