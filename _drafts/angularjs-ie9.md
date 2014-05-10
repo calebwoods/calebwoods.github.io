@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Angular.js, IE9, CORS, and Nginx"
-date:   2014-03-22 10:58:54
+date:   2014-05-10 17:15:00
 ---
 
 In this post I'll share an example of a recent Angular.js application I worked on which needed to support Internet Explorer 9 and connect to multiple remote APIs.
@@ -24,7 +24,11 @@ As it is, though, Internet Explorer 9 and below do not support CORS, which is a 
 
 A server side proxy for our API, however, does allow us to solve this issue. With a proxy we can let the server forward requests to the other subdomains, and to the browser it looks like it is calling the same server.
 
-This means we could have a request like `frontend.example.com/api/items.json` forwarded to `api.example.com/items.json`. And, this works in all browsers.
+This means we could have a mapping of request like below which works in all browsers.
+
+```
+frontend.example.com/api/items => api.example.com/items
+```
 
 ### Development
 
@@ -71,14 +75,14 @@ location /api1 {
   rewrite ^/api1/(.*) /$1 break;
   proxy_redirect off;
   proxy_pass https://api1.example.com;
-  ...
+  # ...
 }
 
 location /api2 {
   rewrite ^/api2/(.*) /$1 break;
   proxy_redirect off;
   proxy_pass https://api2.example.com;
-  ...
+  # ...
 }
 ```
 
