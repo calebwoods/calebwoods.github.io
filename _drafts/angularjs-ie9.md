@@ -10,7 +10,7 @@ The issue with this setup is that by default the browser prevents any Javascript
 
 ### JSONP
 
-[JSONP](http://en.wikipedia.org/wiki/JSONP) is an option that many popular APIs expose for Javascript clients. With JSONP, the server will respond with a Javascript body which includes a function callback as specified in the request. We should note that JSONP only supports GET requests, which is how it gets around the Cross Site Scripting issue.
+[JSONP](http://en.wikipedia.org/wiki/JSONP) is an option that many popular APIs expose for Javascript clients. With JSONP, the server will respond with a Javascript body which includes a function callback as specified in the request. We should note that JSONP only supports GET requests and uses `<script>` tags to get around the Cross Site Scripting issue.
 
 This works pretty well with APIs that serve Javascript clients, but unfortunately it means you will have a different API format for mobile clients of the API.
 
