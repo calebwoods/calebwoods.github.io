@@ -218,7 +218,8 @@ a:visited { color: $blue; }
   border: 1px solid #ddd;
   background-color: #eef;
   padding: 0 .2em;
-  white-space: pre-wrap;
+  word-break: break-all;
+  word-wrap: break-word;
 }
 
 .post pre code {
