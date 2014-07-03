@@ -31,6 +31,7 @@ task :publish => [:generate] do
 
     # Create git repo
     system "git init"
+    system "echo 'examples/' > .gitignore"
     system "git add ."
     message = "Site updated at #{Time.now.utc}"
     system "git commit -m #{message.inspect}"
