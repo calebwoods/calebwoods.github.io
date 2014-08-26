@@ -4,7 +4,7 @@ title:  "OWASP Password Hashing in Ruby"
 date:   2014-08-25 17:15:00
 ---
 
-This week I've been working on extracting a Ruby service for authentication out of a legacy Java application.  This particular application was using a version of the [OWASP Hashing example for Java](https://www.owasp.org/index.php/Hashing_Java) which caused to do some research on secure passwords.
+This week I've been working on extracting a Ruby service for authentication out of a legacy Java application.  This particular application was using a version of the [OWASP Hashing example for Java](https://www.owasp.org/index.php/Hashing_Java) which prompted me to do some research on secure passwords.
 
 ### What make a secure password?
 
@@ -16,25 +16,25 @@ The Java code I was replacing linked to the [Open Web Application Security Proje
 
 ### Hashing function
 
-[OWASP](https://www.owasp.org/index.php/Hashing_Java) defines it as: "A Hash function creates a fixed length small fingerprint (or message digest) from an unlimited input string." As web developer most of us our familiar with MD5 or SHA hashing functions.  
+[OWASP](https://www.owasp.org/index.php/Hashing_Java) defines it as: "A Hash function creates a fixed length small fingerprint (or message digest) from an unlimited input string." As web developer most of us are familiar with MD5 or SHA hashing functions.  
 
-By using a one way hashing function a first layer of security is added as the actual plaintext passwords are present in the datastore.
+By using a one way hashing function a security is added as the actual plain text passwords are not present in the datastore.
 
 ### Salted
 
-A drawback to hashed passwords is that a hash of the same plaintext password will also be the identical hashed password.  Because of this an attacker can use a database of precomputed hashes to look of up common passwords if they have database access.
+A drawback to hashed passwords is that a hash of the two  plain text will be identical.  Because of this an attacker can use a database of precomputed hashes to look of up common passwords if they have database access.
 
-A salt is a random string of a fixed length which is added to the plain text password before it is hashed.  This results in a unique hash for each password in a database.  Salts are usually stored in plain text along with the hash, to be used for checking matches.
+A salt is a random string of a fixed length which is added to the plain text password before it is hashed.  This results in a unique hash for each password in a database.  Salts are usually stored in plain text along with the hash and used for checking matches.
 
 ### Hardened
 
 The third technique is to harden the password by hashing the hash.  This process should be repeated a minimum of 1000 times according to the [RSA PKCS5 standard](http://tools.ietf.org/html/rfc2898#section-4.2).  
 
 ```
-hash(hash(hash(hash(hash(password + salt)))))
+hash(hash(hash(hash(...hash(password + salt)))))
 ```
 
-The goal is that this process will increase the amount of time an attacker's script needs to spend hashing passwords, thus slowing down the attack.  Additionally because of improvements in CPU the recommended amount iterations will increase over time.
+The goal is that this process will increase the amount of time an attacker's script needs to spend hashing passwords, thus slowing down the attack.  Additionally as server hardware improves the recommended amount iterations will need to increase.
 
 ### Ruby example
 
@@ -55,7 +55,7 @@ Note that the `SHA1` algorithm can be switched for a more secure one such as `SH
 
 ### Rails
 
-Armed with the knowledge let's look at how the Rails framework helps us solve this problem.  As of Rails 3.1 [has_secure_password](https://github.com/rails/rails/blob/master/activemodel/lib/active_model/secure_password.rb) provides a simple interface to using [bcrypt](https://github.com/codahale/bcrypt-ruby) for hashing passwords.  Bcrypt handles creating and comparing salted hashed password automatically.  
+Armed with the knowledge let's look at how the Rails framework helps us solve this problem.  As of Rails 3.1 [has_secure_password](https://github.com/rails/rails/blob/master/activemodel/lib/active_model/secure_password.rb) provides a simple interface to using [bcrypt](https://github.com/codahale/bcrypt-ruby) for hashing passwords.  Bcrypt gives use nice interface to bcrypt for creating and comparing salted hashed password.  
 
 To handle hardening Bcrypt has a option called cost which will harden your password. By default the factor is 10 which works out to 1,024 iterations, 2^10.  Also the cost is encoded in the resulting hash so it can be increased overtime and existing passwords will continue to work.
 
@@ -73,4 +73,4 @@ my_password == "not my password" #=> false
 
 ### Conclusion
 
-Security standards are an important to keep up on.  Thankfully the most common tools in the Rails ecosystem `has_secure_password` and [Devise](https://github.com/plataformatec/devise) uses these recommended techniques.  However, it is still good to the principles when evaluation authentication systems or building password hashing in anther language.
+Security standards are an important to keep up on.  Thankfully the most common tools in the Rails ecosystem [has_secure_password](https://github.com/rails/rails/blob/master/activemodel/lib/active_model/secure_password.rb) and [Devise](https://github.com/plataformatec/devise) use these recommended techniques.  However, it is still good to know the principles when evaluation authentication systems or building password hashing in anther language.
