@@ -1,0 +1,12 @@
+digraph models_diagram {
+  graph[overlap=false, splines=true, bgcolor=transparent]
+
+  "Main" [shape=box, label="Main"]
+  "Customer 1" [shape=box, label="Customer 1"]
+  "Customer 2" [shape=box, label="Customer 2"]
+  "Customer 29" [shape=box, label="Customer 29"]
+
+  "Main" -> "Customer 1"
+  "Main" -> "Customer 2"
+  "Main" -> "Customer 29"
+}
