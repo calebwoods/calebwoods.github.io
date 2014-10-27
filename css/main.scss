@@ -214,6 +214,11 @@ a:visited { color: $blue; }
   margin-left: 1.35em;
 }
 
+.post img {
+  display: block;
+  margin: 0 auto;
+}
+
 .post code {
   border: 1px solid #ddd;
   background-color: #eef;
