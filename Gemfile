@@ -1,5 +1,5 @@
 source 'https://rubygems.org'
 
-gem 'jekyll', '~> 2.0.0.alpha.1'
+gem 'jekyll', '~> 2.0.0'
 gem 'jekyll-slim'
 gem 'rouge'
