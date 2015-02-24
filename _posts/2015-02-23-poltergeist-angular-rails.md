@@ -82,3 +82,5 @@ end
 After fixing a couple of tests that used features of Capybara specific to Selenium and some issues with [mouse events](https://github.com/teampoltergeist/poltergeist#mouseeventfailed-errors), I was able to run the entire test suite with Poltergeist.
 
 With these changes in place running Spinach tests, which took 4 minutes using Selenium, now took just 2 minutes.  Well worth the effort.
+
+**Edit 2015-02-24**: Today after upgrading [PhantomJS to version 2.0.0](http://phantomjs.org/release-2.0.html) I'm seeing even more remarkable speed improvements.  The same Spinach tests now run in about 75 seconds.  Overall a 3.2x improvement from using Selenium.
