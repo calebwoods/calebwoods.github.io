@@ -4,10 +4,10 @@ build:
     - bundle-install
     - script:
         name: checkout source branch
-        code: git checkout source
+        code: if [ -d _posts ]; then git checkout source; fi;
     - script:
         name: generate site
-        code: bundle exec jekyll build --trace
+        code: if [ -d _posts ]; then bundle exec jekyll build --trace; fi;
 deploy:
   steps:
     - bundle-install
