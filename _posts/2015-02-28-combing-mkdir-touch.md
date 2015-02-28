@@ -7,8 +7,8 @@ date: "2015-02-28"
 As a developer, I often use the unix [touch](http://man7.org/linux/man-pages/man1/touch.1.html) command to create files.  One thing that I've always wished `touch` would do is automatically create intermediate directories.  Because it doesn't do that, if I want to create `foo/bar/baz.txt` in an empty directory I need to use the following commands.
 
 ```bash
-mkdir -p foo/bar
-touch foo/bar/baz.txt
+$ mkdir -p foo/bar
+$ touch foo/bar/baz.txt
 ```
 
 Because I type these commands enough I decided to write a function to stick in my Bash config to combine these commands and invoke it using `touch`.  Here is what I came up with.
