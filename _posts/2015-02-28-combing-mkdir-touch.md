@@ -15,14 +15,24 @@ Because I type these commands enough I decided to write a function to stick in m
 
 ```bash
 # .bash_profile
-touch () { 
+touch () {
     mkdir -p `dirname $1`;
     `which touch` $1
-} 
+}
 ```
 
 With this I can call `touch foo/bar/baz.txt` and the directories `foo` and `bar` will be created in addition to the file `baz.txt`.
 
-Something new for me was using a sub command `which touch` to find the OS's default `touch` command and call it.  There may be better ways do this in Bash, but this seems to get the job done.  
+```
+$ touch foo/bar/baz.txt
+$ tree foo
+foo
+└── bar
+    └── baz.txt
+
+1 directory, 1 file
+```
+
+Something new for me was using a sub command `which touch` to find the OS's default `touch` command and call it.  There may be better ways do this in Bash, but this seems to get the job done.
 
 I'm looking forward to saving some key strokes with this function.  Have some custom Bash functions you use all the time?  Tweet at me [@calebwoods](http://twitter.com/calebwoods), would love to hear your time saving tips.
