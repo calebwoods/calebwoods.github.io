@@ -1,0 +1,25 @@
+box: wercker/ruby
+build:
+  steps:
+    - bundle-install
+    - script:
+        name: checkout source branch
+        code: git checkout source
+    - script:
+        name: generate site
+        code: bundle exec jekyll build --trace
+deploy:
+  steps:
+    - bundle-install
+    - williamli/add-deploy-ssh-key:
+       keyname: GITHUB
+    - script:
+        name: set git config email
+        code: git config --global user.email "calebawoods@gmail.com"
+    - script:
+        name: set git config name
+        code: git config --global user.name "Caleb Woods"
+    - script:
+        name: publish rake task
+        code: bundle exec rake publish
+
