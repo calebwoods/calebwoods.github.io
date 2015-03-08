@@ -2,6 +2,9 @@
 layout: post
 title: "Combining mkdir -p and touch"
 date: "2015-02-28"
+tags:
+  - bash
+  - scripting
 ---
 
 As a developer, I often use the unix [touch](http://man7.org/linux/man-pages/man1/touch.1.html) command to create files.  One thing that I've always wished `touch` would do is automatically create intermediate directories.  Because it doesn't do that, if I want to create `foo/bar/baz.txt` in an empty directory I need to use the following commands.

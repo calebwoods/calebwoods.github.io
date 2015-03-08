@@ -2,6 +2,9 @@
 layout: post
 title: "'Simple' Git Merge Strategy"
 date: 2014-03-22 17:58:54
+tags:
+  - git
+  - workflow
 ---
 
 At work we adopted use of the [simple branching strategy](http://blogs.atlassian.com/2014/01/simple-git-workflow-simple/) for our use of git. The goal of this approach over something like Git Flow is to reduce the complexity of branching and create a workflow that is easy to follow.

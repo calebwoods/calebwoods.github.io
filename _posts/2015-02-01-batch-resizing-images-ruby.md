@@ -2,6 +2,9 @@
 layout: post
 title: "Batch Resizing Images with Ruby"
 date: "2015-02-01"
+tags:
+  - ruby
+  - scripting
 ---
 
 Working with image files is a common task in web development, and many great tools exist for advanced image manipulation.  However, often all I need to do with a set of images is resize them to be more web friendly.

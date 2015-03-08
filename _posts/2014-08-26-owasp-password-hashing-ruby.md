@@ -2,6 +2,9 @@
 layout: post
 title:  "OWASP Password Hashing in Ruby"
 date:   2014-08-26 17:15:00
+tags:
+  - ruby
+  - security
 ---
 
 This week I've been working on extracting a Ruby service for authentication out of a legacy Java application.  This particular application was using a version of the [OWASP Hashing example for Java](https://www.owasp.org/index.php/Hashing_Java) which prompted me to do some research on secure passwords.

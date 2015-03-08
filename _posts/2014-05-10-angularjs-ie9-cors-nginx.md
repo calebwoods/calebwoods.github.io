@@ -2,6 +2,11 @@
 layout: post
 title:  "Angular.js, IE9, CORS, and Nginx"
 date:   2014-05-10 17:15:00
+tags:
+  - ie
+  - angularjs
+  - nginx
+  - security
 ---
 
 In this post I'll share an example of a recent Angular.js application I worked on which needed to support Internet Explorer 9 and connect to multiple remote APIs.

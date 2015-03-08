@@ -2,6 +2,10 @@
 layout: post
 title:  "Ruby Database Sharding with Sequel"
 date:   2014-10-26 17:15:00
+tags:
+  - ruby
+  - oracle
+  - database
 ---
 
 In some of my more recent Ruby projects I've had the chance to use the Sequel gem instead of the traditional choice of ActiveRecord and have been very impressed.  On one such project I needed to build a Ruby API over a legacy Oracle database with a custom sharding setup.

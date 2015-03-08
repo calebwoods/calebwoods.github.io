@@ -2,6 +2,9 @@
 layout: post
 title:  "Fog and Slow Rackspace Cloud Files Requests"
 date:   2014-06-04 21:15:00
+tags:
+  - ruby
+  - debugging
 ---
 
 Today I was working on fixing a performance bug for a project that uses the [Fog gem](https://github.com/fog/fog) to access [Rackspace's Cloud Files](http://www.rackspace.com/cloud/files/) API, and I made an interesting discovery that seemed worth sharing.

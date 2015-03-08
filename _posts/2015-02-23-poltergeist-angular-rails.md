@@ -2,6 +2,11 @@
 layout: post
 title: "Poltergeist with Rails and Angular"
 date: "2015-02-23"
+tags:
+  - ruby
+  - rails
+  - testing
+  - angularjs
 ---
 
 This past week I worked on converting a Rails and Angular application that was using Selenium as the driver for [Spinach](https://github.com/codegram/spinach)/[Capybara](https://github.com/jnicklas/capybara) tests over to using [Poltergeist](https://github.com/teampoltergeist/poltergeist).

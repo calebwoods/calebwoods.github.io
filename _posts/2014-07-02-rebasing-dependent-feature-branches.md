@@ -2,6 +2,9 @@
 layout: post
 title:  "Rebasing Dependent Feature Branches"
 date:   2014-07-02 17:15:00
+tags:
+  - git
+  - workflow
 ---
 
 In a recent post I wrote about the ['Simple' Git Merge Strategy](http://www.calebwoods.com/2014/03/22/simple-git-merge-strategy/) that I've been using on my recent projects.

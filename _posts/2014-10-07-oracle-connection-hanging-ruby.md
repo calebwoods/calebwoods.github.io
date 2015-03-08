@@ -2,6 +2,11 @@
 layout: post
 title:  "Oracle connection hanging in Ruby"
 date:   2014-10-07 17:15:00
+tags:
+  - ruby
+  - debugging
+  - oracle
+  - database
 ---
 
 Recently, I came across a database issue on a client project  that I'd never seen before, so I wanted to document it here incase anyone else runs into a similar issue.

@@ -2,6 +2,9 @@
 layout: post
 title:  "Git Status in Your Bash Prompt"
 date:   2014-12-22 12:15:00
+tags:
+  - git
+  - bash
 ---
 
 Over the past few weeks I've been pairing with several different developers and have gotten some questions about the prompt that I use for Bash, which includes some git information.

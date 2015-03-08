@@ -2,6 +2,10 @@
 layout: post
 title:  "Static Lists: Database Table, Module, or Enums"
 date:   2014-04-03 20:00:00
+tags:
+  - ruby
+  - rails
+  - database
 ---
 
 In my experience building web applications I have seen the need for a pattern to solve the problem of static lists. By static lists I mean things like: US states, name prefixes, roles, etc.

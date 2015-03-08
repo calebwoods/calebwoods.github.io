@@ -2,6 +2,10 @@
 layout: post
 title:  "Fix Partial Rails Migration"
 date:   2014-12-23 10:15:00
+tags:
+  - ruby
+  - rails
+  - database
 ---
 
 Using Rails migrations with databases that do not support [DDL Transactions](http://www.sql-workbench.net/dbms_comparison.html) like Oracle and MySQL can be a pain.  Recently, on project where we are using Postgres for development and Oracle in production, I ran into a case where I needed to run a conditional migration to fix schema for production.

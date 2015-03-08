@@ -2,6 +2,8 @@
 layout: post
 title:  "What is your legacy?"
 date:   2014-07-08 20:15:00
+tags:
+  - mentoring
 ---
 
 This weekend I watched a thought provoking keynote from Chad Fowler: [Legacy](http://www.parleys.com/play/53a7d2d1e4b0543940d9e570). In the talk, Chad compares the legacy of other craftsman professions (architect, painter, engineer) to that of software craftsman.
