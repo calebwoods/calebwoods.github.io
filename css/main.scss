@@ -170,6 +170,30 @@ a:visited { color: $blue; }
 
 .meta {
   color: #aaa;
+
+  .article-tag {
+    border-radius: 5px;
+    background-color: $gray;
+    color: $lightgray;
+    font-size: 75%;
+    font-weight: 700;
+    margin-left: 5px;
+    padding: 5px;
+    text-transform: uppercase;
+  }
+}
+
+.related-posts {
+  border-top: 1px dotted $gray;
+  margin-top: 2em;
+
+  h4 {
+    color: $gray;
+    margin: 1em 0;
+  }
+  ul {
+    margin-left: 40px;
+  }
 }
 
 .footer {
@@ -198,6 +222,19 @@ a:visited { color: $blue; }
 /* Posts
 /*
 /*****************************************************************************/
+
+.back {
+  color: $gray;
+  float: left;
+  letter-spacing: 1px;
+  margin-right: 5px;
+
+  a {
+    color: $gray;
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
 
 .post h3, .post h4 {
   margin-top: 40px;
