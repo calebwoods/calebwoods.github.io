@@ -4,7 +4,7 @@ url: http://www.calebwoods.com
 permalink: pretty
 markdown: redcarpet
 highlighter: pygments
-exclude: ["Gemfile", "Gemfile.lock", "Rakefile"]
+exclude: ["Gemfile", "Gemfile.lock", "Rakefile", "examples"]
 lsi: true
 sass:
   sass_dir: _sass

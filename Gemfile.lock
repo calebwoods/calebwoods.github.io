@@ -36,6 +36,7 @@ GEM
     jekyll-paginate (1.1.0)
     jekyll-sass-converter (1.3.0)
       sass (~> 3.2)
+    jekyll-sitemap (0.8.0)
     jekyll-slim (0.8.2)
       jekyll (>= 0.10.0)
       slim
@@ -82,6 +83,7 @@ PLATFORMS
 
 DEPENDENCIES
   jekyll (~> 2.2.0)
+  jekyll-sitemap
   jekyll-slim
   jekyll-tagging
   rouge
