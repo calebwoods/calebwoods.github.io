@@ -10,9 +10,7 @@ layout: default
 <p class="meta">
   {{ page.date | date_to_string }}
   {% for tag in page.tags %}
-    <span class="article-tag">
-      {{ tag }}
-    </span>
+    <a class="article-tag" href="{{ tag | tag_url }}">{{ tag }}</a>
   {% endfor %}
 </p>
 

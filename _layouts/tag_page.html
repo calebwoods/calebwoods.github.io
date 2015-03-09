@@ -1,0 +1,23 @@
+---
+layout: default
+title: Caleb Woods | Tags
+---
+
+<div id="home">
+  <span class="back"><a href="/">Home</a> ></span>
+  <h2>{{ page.tag | capitalize }}</h2>
+
+  <ul class="article-index">
+    {% for post in page.posts %}
+      <li class="{% cycle 'even', 'odd' %}">
+        <a href="{{ post.url }}">
+          <span class="article-date">
+            {{ post.date | date: "%-m/%-d/%Y" }}
+          </span>
+          <span class="article-title">
+            {{ post.title }}
+          </span>
+        </a>
+    {% endfor %}
+  </ul>
+</div>

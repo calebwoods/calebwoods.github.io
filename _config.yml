@@ -8,3 +8,5 @@ exclude: ["Gemfile", "Gemfile.lock", "Rakefile"]
 lsi: true
 sass:
   sass_dir: _sass
+tag_page_layout: tag_page
+tag_page_dir: tags

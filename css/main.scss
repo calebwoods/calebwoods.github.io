@@ -180,6 +180,11 @@ a:visited { color: $blue; }
     margin-left: 5px;
     padding: 5px;
     text-transform: uppercase;
+    text-decoration: none;
+
+    &:hover {
+      background-color: $darkgray;
+    }
   }
 }
 
