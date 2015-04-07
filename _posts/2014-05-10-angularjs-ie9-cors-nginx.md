@@ -7,6 +7,7 @@ tags:
   - angularjs
   - nginx
   - security
+  - server
 ---
 
 In this post I'll share an example of a recent Angular.js application I worked on which needed to support Internet Explorer 9 and connect to multiple remote APIs.
