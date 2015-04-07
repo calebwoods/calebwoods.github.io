@@ -17,10 +17,10 @@ $ touch foo/bar/baz.txt
 Because I type these commands enough I decided to write a function to stick in my Bash config to combine these commands and invoke it using `touch`.  Here is what I came up with.
 
 ```bash
-# .bash_profile
+# .bashrc
 touch () {
-    mkdir -p `dirname $1`;
-    `which touch` $1
+  mkdir -p "$(dirname "$1")"
+  command touch "$1"
 }
 ```
 
@@ -36,6 +36,6 @@ foo
 1 directory, 1 file
 ```
 
-Something new for me was using a sub command `which touch` to find the OS's default `touch` command and call it.  There may be better ways do this in Bash, but this seems to get the job done.
+Something new for me was using `command` utility to call the OS's default `touch` command when we are overriding it.
 
 I'm looking forward to saving some key strokes with this function.  Have some custom Bash functions you use all the time?  Tweet at me [@calebwoods](http://twitter.com/calebwoods), would love to hear your time saving tips.
