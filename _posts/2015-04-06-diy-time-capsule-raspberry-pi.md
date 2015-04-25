@@ -217,6 +217,23 @@ On the share you'll see a `.sparsebundle` file, which is where your backup is st
 
 With the image mounted you will see a `Time Machine Backups` menu item in Finder under the Devices section.
 
+### Spin Down Idle Drive
+
+Because our server will be running 24 hours a day, it's a good idea to have the backup drive spin down when not in use.  The below commands will setup our drive to spin down after 30 minutes of no activity.
+
+```
+$ sudo apt-get install hdparm
+$ sudo vim /etc/hdparm.conf
+
+# add this entry at the bottom
+command_line {
+  hdparm -S 240 /dev/sda
+}
+
+# restart server
+$ sudo reboot
+```
+
 ### Sources
 
 And that's it. Your DIY Time Capsule is complete.  I used information from the sources below:
@@ -224,3 +241,4 @@ And that's it. Your DIY Time Capsule is complete.  I used information from the s
 * [http://outcoldman.com/en/archive/2014/11/09/ubuntu-as-home-server-part-3-afp-server](http://outcoldman.com/en/archive/2014/11/09/ubuntu-as-home-server-part-3-afp-server)
 * [http://netatalk.sourceforge.net/wiki/index.php/Install_Netatalk_3.1.7_on_Debian_7_Wheezy](http://netatalk.sourceforge.net/wiki/index.php/Install_Netatalk_3.1.7_on_Debian_7_Wheezy)
 * [http://ubuntuforums.org/showthread.php?t=2105755](http://ubuntuforums.org/showthread.php?t=2105755) (Steps 2 and 3)
+* [http://www.havetheknowhow.com/Configure-the-server/Spin-down-idle-drives.html](http://www.havetheknowhow.com/Configure-the-server/Spin-down-idle-drives.html)
