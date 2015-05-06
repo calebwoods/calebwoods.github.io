@@ -21,7 +21,7 @@ One of my biggest issues with a Vagrant setup was that to run any commands, such
 
 ### vagrant ssh -c
 
-While looking at the Vagrant documentation, however, I found the `-c` option which can be passed to `vagrant ssh`.  With this, a command can be specified as a string and sent over ssh to the guest VM then executed with all output re-routed to the host machine's stdout and stderr.
+While looking at the [Vagrant documentation](https://docs.vagrantup.com/v2/cli/ssh.html), however, I found the `-c` option which can be passed to `vagrant ssh`.  With this, a command can be specified as a string and sent over ssh to the guest VM then executed with all output re-routed to the host machine's stdout and stderr.
 
 This means to run the rspec test suite for a project I would just need the following:
 
