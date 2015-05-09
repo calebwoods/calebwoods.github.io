@@ -116,6 +116,7 @@ avahi-daemon
 With those dependencies installed, we just need to make and install Netatalk.
 
 ```
+$ ./bootstrap
 $ ./configure \
 --with-init-style=debian-sysv \
 --without-libevent \
