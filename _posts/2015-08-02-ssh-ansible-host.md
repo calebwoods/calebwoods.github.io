@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "SSH to Ansible host"
+title: "SSH to Ansible host by hostname"
 date: "2015-08-02"
 tags:
   - linux
@@ -9,7 +9,7 @@ tags:
   - scripting
 ---
 
-For my current project we have [Ansible](http://docs.ansible.com/) deploy scripts for our handful of services to a set of development servers.  This has generally worked well, but occasionally we need to SSH directly to the server to debug an issue.  Ideally I'd like to SSH to a server via it's Ansible host name rather than having to look up its IP or machine name.
+For my current project we have [Ansible](http://docs.ansible.com/) deploy scripts for our handful of services to a set of development servers.  This has generally worked well, but occasionally we need to SSH directly to the server to debug an issue.  Ideally I'd like to SSH to a server via it's Ansible hostname rather than having to look up its IP or machine name.
 
 To my knowledge this doesn't exist out of the box with Ansible, so I set about writing a simple Bash function to serve this purpose.
 
@@ -26,7 +26,7 @@ In `~/.bashrc`:
 ```bash
 ansible-ssh() {
   if [ -z "$1" ]; then
-    echo "No host specified"
+    echo "No hostname specified"
     echo "usage: ansible-ssh [hostname] [user=ansible]";
     return 1;
   fi
