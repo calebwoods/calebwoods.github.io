@@ -100,4 +100,6 @@ Post.order(Post.arel_table[:publish_date].desc)
 Post.order('publish_date DESC')
 ```
 
+If you are looking for even more flexibility and control than what ActiveRecord provides, I would highly recommend the [sequel](https://github.com/jeremyevans/sequel) gem.
+
 Have other tricks you use with ActiveRecord? Tweet at me [@calebwoods](https://twitter.com/calebwoods).
