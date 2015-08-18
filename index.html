@@ -1,0 +1,27 @@
+---
+layout: default
+title: Caleb Woods | Writing
+---
+
+<div id="home">
+  <h2>
+    Writing
+  </h2>
+  <ul class="article-index">
+    {% for post in site.posts %}
+      <li class="{% cycle &#39;even&#39;, &#39;odd&#39; %}">
+        <a href="{{ post.url }}"><span class="article-date">{{ post.date | date: "%-m/%-d/%Y" }}</span><span class="article-title">{{ post.title }}</span></a>
+      </li>
+    {% endfor %}
+  </ul>
+  <h2>
+    Writing Elsewhere
+  </h2>
+  <ul class="article-index">
+    {% for post in site.data.other-writing %}
+      <li class="{% cycle &#39;even&#39;, &#39;odd&#39; %}">
+        <a href="{{ post.url }}"><span class="article-date">{{ post.date | date: "%-m/%-d/%Y" }}</span><span class="article-title">{{ post.title }}</span><span class="article-source">{{ post.source }}</span></a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>

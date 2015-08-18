@@ -1,8 +1,10 @@
 source 'https://rubygems.org'
 
-gem 'jekyll', '~> 2.2.0'
-gem 'jekyll-slim'
+gem 'jekyll', '~> 2.5.0'
 gem 'rouge'
-gem 'jekyll-tagging'
-gem 'jekyll-sitemap'
 gem 'rake'
+
+group :jekyll_plugins do
+  gem 'jekyll-tagging'
+  gem 'jekyll-sitemap'
+end
