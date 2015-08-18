@@ -7,4 +7,5 @@ gem 'rake'
 group :jekyll_plugins do
   gem 'jekyll-tagging'
   gem 'jekyll-sitemap'
+  gem 'algoliasearch-jekyll'
 end

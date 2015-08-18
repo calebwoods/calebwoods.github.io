@@ -18,9 +18,13 @@ task :generate do
   })).process
 end
 
+desc "Send post data to algolia"
+task :algolia do
+  system "jekyll algolia push"
+end
 
 desc "Generate and publish blog to gh-pages"
-task :publish => [:generate] do
+task :publish => [:generate, :algolia] do
   Dir.mktmpdir do |tmp|
     cp_r "_site/.", tmp
 

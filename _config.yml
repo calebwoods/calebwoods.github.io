@@ -10,3 +10,8 @@ sass:
   sass_dir: _sass
 tag_page_layout: tag_page
 tag_page_dir: tags
+algolia:
+  application_id: 6AST1QVUR2
+  index_name: calebwoods.com-posts
+gems:
+  - algoliasearch-jekyll

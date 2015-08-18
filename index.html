@@ -3,21 +3,23 @@ layout: default
 title: Caleb Woods | Writing
 ---
 
-<div id="home">
+<div id="home" class="static-articles">
+  <input type="text" id="post-search" placeholder="Search..." />
   <h2>
     Writing
   </h2>
-  <ul class="article-index">
+  <ul class="search-results article-index"></ul>
+  <ul class="article-index static">
     {% for post in site.posts %}
       <li class="{% cycle &#39;even&#39;, &#39;odd&#39; %}">
         <a href="{{ post.url }}"><span class="article-date">{{ post.date | date: "%-m/%-d/%Y" }}</span><span class="article-title">{{ post.title }}</span></a>
       </li>
     {% endfor %}
   </ul>
-  <h2>
+  <h2 class="static">
     Writing Elsewhere
   </h2>
-  <ul class="article-index">
+  <ul class="article-index static">
     {% for post in site.data.other-writing %}
       <li class="{% cycle &#39;even&#39;, &#39;odd&#39; %}">
         <a href="{{ post.url }}"><span class="article-date">{{ post.date | date: "%-m/%-d/%Y" }}</span><span class="article-title">{{ post.title }}</span><span class="article-source">{{ post.source }}</span></a>
@@ -25,3 +27,54 @@ title: Caleb Woods | Writing
     {% endfor %}
   </ul>
 </div>
+<script src="/javascripts/zepto.min.js"></script>
+<script src="/javascripts/algoliasearch.min.js"></script>
+<script>
+  var client = algoliasearch("6AST1QVUR2", "6b12eb2d06794feb21092eeb617cef24");
+  var index = client.initIndex('calebwoods.com-posts');
+  var input = $('#post-search')
+  var resultContainer = $('.search-results')
+  var articlesContainer = $('.static')
+  var template = ' \
+    <li> \
+      <a href="{url}"> \
+        <span class="article-title">{title}</span> \
+      </a> \
+      <p class="article-snippet">{snippet}</span> \
+    </li>'
+  var bindTemplate = function (string, data) {
+    for (var part in data) {
+      string = string.replace(new RegExp('{' + part + '}', 'g'), data[part]);
+    }
+    return string;
+  }
+  var clearSearch = function () {
+    articlesContainer.show();
+    resultContainer.hide();
+  }
+  var searchFunc = function() {
+    index.search(input.val(), { hitsPerPage: 5 }).then(function searchSuccess(content) {
+      articlesContainer.hide();
+      resultContainer.empty();
+      resultContainer.show();
+
+      content.hits.forEach(function (hit) {
+        resultContainer.append(bindTemplate(template, {
+          url: hit.url,
+          title: hit.title,
+          snippet: hit._highlightResult.text.value
+        }))
+      });
+    }).catch(clearSearch);
+  }
+
+  input.on('keydown', function (e) {
+    if (e.which === 13) {
+      if (input.val() === '') {
+        clearSearch()
+      } else {
+        searchFunc()
+      }
+    }
+  })
+</script>

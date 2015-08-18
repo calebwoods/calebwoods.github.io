@@ -287,3 +287,19 @@ a:visited { color: $blue; }
 .tag_cloud {
   margin: 20px 0;
 }
+
+// Search
+
+#post-search {
+  margin-bottom: 1rem;
+  font-size: 20px;
+  padding: .25rem .5rem;
+  float: right;
+  outline: none;
+}
+
+.algolia__result-highlight {
+  background-color: #D3E8F6;
+  background-color: rgba(38,139,210,0.2);
+  font-weight: bold;
+}
