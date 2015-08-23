@@ -1,9 +1,11 @@
 ---
 layout: post
-title: "Minimal Blogging Infrastructure"
+title: "Minimal Blogging Infrastructure with Jekyll, Github and Wercker"
 date: "2015-08-23"
 tags:
   - writing
+  - ruby
+  - git
 ---
 
 Over the past couple of years I've made a concerted effort to write a blog post at least once a month.  My motivation for this goal has been to improve my writing overall and use my blog as a playground to document my latest experiments or crazy bug fixes.
@@ -16,7 +18,7 @@ Before I started writing on my own blog I'd done some occasional writing elsewhe
 
 To get to point where publishing was easy I wanted to have a process for writing posts that was minimal enough to help me focus on writing.  Also wanted to be able to write in [Github flavored Markdown](https://help.github.com/articles/github-flavored-markdown/) like I do throughout the day when I'm working on projects.
 
-Ruby being my go to language these days and wanting to give [Github pages](https://help.github.com/articles/using-jekyll-with-pages/) a try for hosting, I settled on using Jekyll for my blog.
+Ruby being my go to language these days and wanting to give [Github pages](https://help.github.com/articles/using-jekyll-with-pages/) a try for hosting, I settled on using [Jekyll](http://jekyllrb.com/) for my blog.
 
 ### Plugins
 
