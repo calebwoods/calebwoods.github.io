@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Hackable from Anywhere Blogging Infrastructure"
+title: "Minimal Blogging Infrastructure"
 date: "2015-08-23"
 tags:
   - writing
