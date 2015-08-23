@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Minimal Blogging Infrastructure with Jekyll, Github and Wercker"
+title: "Minimal Blogging Infrastructure with Jekyll, Github, and Wercker"
 date: "2015-08-23"
 tags:
   - writing
