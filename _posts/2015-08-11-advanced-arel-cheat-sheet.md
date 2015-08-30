@@ -13,6 +13,7 @@ This post was motivated by a recent bug I found in one of my applications where 
 
 Also check out [scuttle.io](http://www.scuttle.io/) as a further resource to translate SQL to Arel.
 
+**Note** Arel is considered an internal API for ActiveRecord and can change between major Rails versions. 
 ### Setup
 
 My examples assume a Rails 4.2 application and a single `Post` model with 2 attributes `title` and `published_date`, [gist](https://gist.github.com/calebwoods/af61c6af057067f55a27).
