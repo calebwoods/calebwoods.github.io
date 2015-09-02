@@ -77,7 +77,7 @@ Now that we have a method for resizing images we need a way to collect images fo
 ```ruby
 resize_dir = "#{@directory}/resized"
 unless File.directory? resize_dir
-  puts "Creating #{dir}/"
+  puts "Creating #{resize_dir}/"
   Dir.mkdir resize_dir
 end
 
