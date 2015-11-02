@@ -10,7 +10,7 @@ tags:
 
 As mentioned in a [previous post](/2015/10/19/choosing-frontend-form-data-heavy-applications/), part of my current learning and experimentation is finding ways to mix a "traditional" Rails application with Javascript components.
 
-Recently, I've been further exploring [React](https://facebook.github.io/react/), which I really like, but I couldn't find a simple way to unit test components in a Rails app using the [Asset Pipeline](http://guides.rubyonrails.org/asset_pipeline.html).
+Recently, I've been further exploring [React](https://facebook.github.io/react/), which I really like, but I couldn't find a simple way to unit test components in a Rails app using the [Asset Pipeline](http://guides.rubyonrails.org/asset_pipeline.html). The benefit I'm looking for is being able to do a bulk of the frontend with server side rendered views as they are easy to build quickly and add React components for parts of the interface that need it.
 
 Most React testing examples assume a [CommonJS](http://requirejs.org/docs/commonjs.html) way of structuring and requiring Javascript files.  Strangely,  or maybe to increase adoption, the  [react-rails](https://github.com/reactjs/react-rails) gem integrates with the Asset Pipeline and I wanted to find a testing solution to match.
 
