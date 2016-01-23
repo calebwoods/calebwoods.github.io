@@ -21,7 +21,7 @@ If a project is replacing an existing system and you keep the same name, but add
 
 #### Reduce Confusion, Add Meaning
 
-![Old Book](images/old_book.jpg)
+![Old Book](https://pixabay.com/static/uploads/photo/2015/06/14/19/24/book-809396_960_720.jpg)
 
 With a lot of business software the names picked often describe the type of system, rather than a unique way to identify this system.  Over the past couple of years I've worked on an internal reporting tool for our consultancy that reads data from our time tracking service, which is named Almanac.  It could have been billable hours tracker as it analyzes each employees billable hours to ensure they are on track, which is a leading indicator of profitablity for our company.  Instead I chose the name Almanac as a metaphor for analyzing past data to help us forecast the future.
 
