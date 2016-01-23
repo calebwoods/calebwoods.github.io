@@ -21,6 +21,8 @@ If a project is replacing an existing system and you keep the same name, but add
 
 #### Reduce Confusion, Add Meaning
 
+![Old Book](images/old_book.jpg)
+
 With a lot of business software the names picked often describe the type of system, rather than a unique way to identify this system.  Over the past couple of years I've worked on an internal reporting tool for our consultancy that reads data from our time tracking service, which is named Almanac.  It could have been billable hours tracker as it analyzes each employees billable hours to ensure they are on track, which is a leading indicator of profitablity for our company.  Instead I chose the name Almanac as a metaphor for analyzing past data to help us forecast the future.
 
 #### Spark Creativity
@@ -43,7 +45,7 @@ Names don't alway have to make sense in your native language, but they should be
 
 ### Themes
 
-<a data-flickr-embed="true" data-footer="true"  href="https://www.flickr.com/photos/viewfrom52/2081809198/in/photolist-4aXPm3-xQ9S6-dJQ7Vv-yamepw-5ttdFu-7Xq1Ub-pdMSEc-4ExKyW-oDwAMA-cFjJZ7-bHb4wP-r3e4q2-rBAav-izKAw9-dJSRbw-4wdgAy-4LFF3N-iM16xm-e1opzS-fC2o6P-usDK6z-6YJdRB-bNNyRa-4HokX9-s1tazj-4YC5ci-DWZhr-c2foK5-c2h171-fChuPh-crVy8w-crVwNw-6o7uGo-DuoK-dJMpaD-sfisWV-bXeBmS-BDrHMN-zSreN-4D92hb-993MhT-8BGWku-nfnskb-qwFx8-nJuFHc-bqy3sY-8H5Fia-bDsWmR-fFBJzL-hwA6H" title="Best Elephant Photo!"><img src="https://farm3.staticflickr.com/2210/2081809198_69da6be083_z.jpg" width="640" height="427" alt="Best Elephant Photo!"></a><script async src="//embedr.flickr.com/assets/client-code.js" charset="utf-8"></script>
+<a data-flickr-embed="true"  href="https://www.flickr.com/photos/viewfrom52/2081809198/in/photolist-4aXPm3-xQ9S6-dJQ7Vv-yamepw-5ttdFu-7Xq1Ub-pdMSEc-4ExKyW-oDwAMA-cFjJZ7-bHb4wP-r3e4q2-rBAav-izKAw9-dJSRbw-4wdgAy-4LFF3N-iM16xm-e1opzS-fC2o6P-usDK6z-6YJdRB-bNNyRa-4HokX9-s1tazj-4YC5ci-DWZhr-c2foK5-c2h171-fChuPh-crVy8w-crVwNw-6o7uGo-DuoK-dJMpaD-sfisWV-bXeBmS-BDrHMN-zSreN-4D92hb-993MhT-8BGWku-nfnskb-qwFx8-nJuFHc-bqy3sY-8H5Fia-bDsWmR-fFBJzL-hwA6H" title="Best Elephant Photo!"><img src="https://farm3.staticflickr.com/2210/2081809198_69da6be083_n.jpg" width="320" height="213" alt="Best Elephant Photo!"></a><script async src="//embedr.flickr.com/assets/client-code.js" charset="utf-8"></script>
 
 With rise Service Orient Architechure (SOA) and many systems being of many varied parts there becomes an opportunity for names to follow a theme and fit into an interesting narative.  On my most recent project as an example we began to split out the pieces for the data warehouse application that were building and needed to come up with a naming scheme for these services.  We ended up with 3 pieces: data extraction, data processing/storage, customized reporting.  Being that several big data tools are already have mascots we decided on: Hippo (think hugry hippos), Elephant (never forgets), and Rhino (sounds cool) for our project names.  These unique names have given us a framework for discussing data interaction that we won't have had with more generic names.
 
