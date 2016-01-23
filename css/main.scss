@@ -45,6 +45,11 @@ a         { color: $blue; }
 a:hover   { color: $lightblue; }
 a:visited { color: $blue; }
 
+blockquote {
+  padding-left: 1em;
+  border-left: 5px solid $gray;
+}
+
 /*****************************************************************************/
 /*
 /* Home
