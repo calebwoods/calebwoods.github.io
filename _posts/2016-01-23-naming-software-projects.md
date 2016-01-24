@@ -17,7 +17,7 @@ So if we know naming is important inside our projects, are there benefits of mea
 
 #### Reset Expectations
 
-If a project is replacing an existing system and you keep the same name but add a modifier like "v2" you cripple your chance to make changes.  Stakeholders expect it to work like old system (even if it was painful) plus add the new functionality they want.  However, if you start with a new name they will evaluate the way the problem was solved from a clean slate.
+If a project is replacing an existing system and you keep the same name but add a modifier like "v2" you cripple your chance to make changes.  Stakeholders expect it to work like the old system (even if it was painful) plus add the new functionality they want.  However, if you start with a new name they will evaluate the way the problem was solved from a clean slate.
 
 #### Reduce Confusion, Add Meaning
 
@@ -41,13 +41,13 @@ Is there a meaningful word or phrase that you can use to describe your project? 
 
 #### Translations
 
-Names don't alway have to make sense in your native language, but they should be memorable.  As an example I once built a simple tool which had the purpose of sending from one service to another one, basicaly tying the systems together.  For this project I chose the name cravatta which is the Italian word to tie a tie.  While the transaltion wasn't perfect, being able to think about project as a single word crystalized the purpose of the project.
+Names don't alway have to make sense in your native language, but they should be memorable.  As an example I once built a simple tool which had the purpose of sending from one service to another one, basically tying the systems together.  For this project I chose the name cravatta which is the Italian word to tie a tie.  While the translation wasn't perfect, being able to think about project as a single word crystalized the purpose of the project.
 
 ### Themes
 
 ![Hippo, Elephant, and Rhino](/images/hippo_elephant_rhino.png)
 
-With the rise of Service Orient Architechure (SOA) there comes an opportunity for names to follow a theme and fit into an interesting narative.  On my most recent project, as an example, we began to split out the pieces for the data warehouse application that we were building and needed to come up with a naming scheme for these services.  We ended up with 3 pieces: data extraction, data processing/storage, and customized reporting.  Being that several big data tools already have animal mascots we decided on: Hippo (think hugry hippos), Elephant (never forgets), and Rhino (sounds cool) for our project names.  These unique names have given us a framework for discussing data interaction that we wouldn't have had with more generic names.
+With the rise of Service Orient Architecture (SOA) there comes an opportunity for names to follow a theme and fit into an interesting narrative.  On my most recent project, as an example, we began to split out the pieces for the data warehouse application that we were building and needed to come up with a naming scheme for these services.  We ended up with 3 pieces: data extraction, data processing/storage, and customized reporting.  Being that several big data tools already have animal mascots we decided on: Hippo (think hungry hippos), Elephant (never forgets), and Rhino (sounds cool) for our project names.  These unique names have given us a framework for discussing data interaction that we wouldn't have had with more generic names.
 
 ### Conclusion
 
