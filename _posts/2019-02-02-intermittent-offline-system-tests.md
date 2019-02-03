@@ -8,9 +8,9 @@ tags:
   - rails
 ---
 
-As a new feature for [Ninja Master](https://ninjamasterapp.com/), my team wanted to better support the intermittent connections users may experience while running competitions. Typical usage is on a phone (over WiFi or LTE) in a large metal building that could have lots of interference.
+As a new feature for [Ninja Master](https://ninjamasterapp.com/), my team wanted to better support the intermittent connections users may experience while running competitions. The typical usage is on a phone (over WiFi or LTE) in a large metal building which will likely have lots of interference.
 
-To solve this we implemented some special error handling for offline or intermittent connections to ensure users could keep timing their competition and only require a solid connection for the final submission of run data to the server.
+To solve this we implemented some special error handling for intermittent connections to ensure users could keep timing their competition and only require a solid connection for the final submission of run data to the server.
 
 ### Manual Testing
 
@@ -20,9 +20,9 @@ Using the Chrome DevTools it is pretty easy to [simulate offline behavior](https
 
 ### Programatic Solution
 
-A common solution I've seen when search on this topic is to add a Rack Middleware around your application that can return error codes when a global variable is set by your test runner. This could have worked, but didn't seem as clean, especially given we wanted to quickly toggle back and forth. Given that we are already using Chromedriver and Selenium for our System tests I started looking for a simple way to hook into the network features in Chrome DevTools.
+A common solution I've seen mentioned when searching on this topic is to add a Rack Middleware around your application that will return error codes when a global variable is set by your test runner. This could have worked, but didn't seem as clean, especially for quickly toggle the offline mode on and off. Given that we are already using Chromedriver and Selenium for our System tests I started looking for a simple way to hook into the network features in Chrome DevTools.
 
-After doing some spelunking in Pry, I discovered that through a [Selenium Extension](https://seleniumhq.github.io/selenium/docs/api/rb/Selenium/WebDriver/DriverExtensions/HasNetworkConditions.html) Chromedriver exposes a couple methods for reading a manipulating the Network Conditions: `network_conditions` and `network_conditions=`. I will note that documentation mentions that this is a Private API.
+After doing some spelunking in Pry, I discovered that through a [Selenium Extension](https://seleniumhq.github.io/selenium/docs/api/rb/Selenium/WebDriver/DriverExtensions/HasNetworkConditions.html), Chromedriver exposes a couple methods for reading and manipulating the Network Conditions: `network_conditions` and `network_conditions=`. Note that the documentation mentions that this is a Private API.
 
 ### Toggling Offline
 
