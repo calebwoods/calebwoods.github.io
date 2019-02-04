@@ -15,6 +15,7 @@ To solve this we implemented some special error handling for intermittent connec
 ### Manual Testing
 
 ![Manual Offline Testing](/images/offline/manual_offline.gif)
+<small>&copy; 2019 RoleModel Software, Inc</small>
 
 Using the Chrome DevTools it is pretty easy to [simulate offline behavior](https://developers.google.com/web/ilt/pwa/tools-for-pwa-developers#simulate_offline_behavior) with a checkbox. This worked great for spiking the functionality, but I still wanted to find a way to add coverage for this new behavior to our [RSpec System tests](https://relishapp.com/rspec/rspec-rails/docs/system-specs/system-spec).
 
@@ -50,5 +51,6 @@ page.driver.browser.network_conditions = {
 To make things clearer I also wrapped these commands into `go_offline` and `go_online` helper methods.
 
 ![Automated Offline Testing](/images/offline/automated_offline.gif)
+<small>&copy; 2019 RoleModel Software, Inc</small>
 
 I'm really happy with how this approach turned out. It provides a simple way to ensure that offline or intermittent connection behavior can be driven by tests and doesn't require messing with global variables or Rack middleware.
