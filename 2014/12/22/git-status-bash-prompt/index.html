@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Git Status in Your Bash Prompt</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="git,bash" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Git Status in Your Bash Prompt
+</h2>
+
+<p class="meta">
+  22 Dec 2014
+  
+    <a class="article-tag" href="/tags/git">git</a>
+  
+    <a class="article-tag" href="/tags/bash">bash</a>
+  
+</p>
+
+<div class="post">
+  <p>Over the past few weeks I&#39;ve been pairing with several different developers and have gotten some questions about the prompt that I use for Bash, which includes some git information.</p>
+
+<p><img src="/images/bash_prompt.png" alt="Bash Prompt Example"></p>
+
+<p>So what is all of that information? <code>~/code/personal/calebwoods</code> is the current path for the shell and is always displayed.  The information within the parans is the git information, which is only shown when in a git repository.</p>
+
+<h3>Minutes Since Last Commit</h3>
+
+<p>This number shows how long it has been in minutes since a commit was made to the current branch.  This idea was taken from Gary Bernhardt&#39;s <a href="https://github.com/garybernhardt/dotfiles/blob/master/.bashrc">dotfiles</a>.  I use it as reminder to ensure commits are happening frequently.</p>
+
+<h3>Current Branch</h3>
+
+<p>The text after the <code>|</code> indicates the current git branch.  This is pretty common and probably doesn&#39;t need much explanation.</p>
+
+<h3>Color</h3>
+
+<p>In the prompt example, you&#39;ll notice that the git portion has a different color.  This color is based on the working directory status.</p>
+
+<ul>
+<li>Green: no changes, everything committed</li>
+<li>Yellow: changes, everything staged</li>
+<li>Red: changes, unstaged changes</li>
+</ul>
+
+<p>To do this calculation I have a <code>_git_color</code> function in my bash profile.</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">GREEN</span><span class="o">=</span><span class="s1">&#39;\e[0;32m&#39;</span><span class="p">;</span>
+<span class="nv">YELLOW</span><span class="o">=</span><span class="s1">&#39;\e[1;33m&#39;</span><span class="p">;</span>
+<span class="nv">RED</span><span class="o">=</span><span class="s1">&#39;\e[1;31m&#39;</span><span class="p">;</span>
+
+<span class="k">function</span> _git_color<span class="o">()</span> <span class="o">{</span>
+  <span class="sb">`</span><span class="nb">command </span>git branch &gt; /dev/null 2&gt;<span class="p">&amp;</span>1<span class="sb">`</span><span class="p">;</span> <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> -eq <span class="m">0</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nv">clean</span><span class="o">=</span><span class="sb">`</span><span class="nb">command </span>git status <span class="p">|</span> grep <span class="s2">&quot;nothing to commit&quot;</span> <span class="p">|</span> wc -l<span class="sb">`</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$clean&quot;</span> -eq <span class="s2">&quot;1&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+      <span class="nb">echo</span> <span class="nv">$GREEN</span><span class="p">;</span> <span class="k">else</span> <span class="c"># clean working directory</span>
+      <span class="nv">stagged</span><span class="o">=</span><span class="sb">`</span><span class="nb">command </span>git status <span class="p">|</span> grep <span class="s2">&quot;not staged for commit&quot;</span> <span class="p">|</span> wc -l<span class="sb">`</span>
+      <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$stagged&quot;</span> -eq <span class="s2">&quot;1&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">echo</span> <span class="nv">$RED</span><span class="p">;</span> <span class="k">else</span> <span class="c"># unstagged changes</span>
+        <span class="nb">echo</span> <span class="nv">$YELLOW</span><span class="p">;</span> <span class="c"># all changes stagged</span>
+      <span class="k">fi</span><span class="p">;</span>
+    <span class="k">fi</span><span class="p">;</span>
+  <span class="k">fi</span><span class="p">;</span>
+<span class="o">}</span>
+</code></pre></div>
+<h3>Putting It All Together</h3>
+
+<p>Note that the <code>\e[00m</code> color code is needed to terminate the color of prompt.</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">NORMAL</span><span class="o">=</span><span class="s1">&#39;\e[00m&#39;</span><span class="p">;</span>
+<span class="nv">PS1</span><span class="o">=</span><span class="s1">&#39;\n\w$(__git_ps1 &quot; (`_git_color``minutes_since_last_commit`|%s$NORMAL)&quot;)\n\$ &#39;</span>
+</code></pre></div>
+<p>This results in a prompt that looks like the following:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">~/code/personal/calebwoods (12|source)
+$
+</code></pre></div>
+<p>Have your own prompt tips for seeing git information in your prompt? Contact me, I&#39;m always looking for ways to improve mine.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2015/08/23/minimal-blogging-infrastructure/">
+          <span class="article-title">Minimal Blogging Infrastructure with Jekyll, Github, and Wercker</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2014/07/02/rebasing-dependent-feature-branches/">
+          <span class="article-title">Rebasing Dependent Feature Branches</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2014/03/22/simple-git-merge-strategy/">
+          <span class="article-title">'Simple' Git Merge Strategy</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

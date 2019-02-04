@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Fix Partial Rails Migration</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="ruby,rails,database" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Fix Partial Rails Migration
+</h2>
+
+<p class="meta">
+  23 Dec 2014
+  
+    <a class="article-tag" href="/tags/ruby">ruby</a>
+  
+    <a class="article-tag" href="/tags/rails">rails</a>
+  
+    <a class="article-tag" href="/tags/database">database</a>
+  
+</p>
+
+<div class="post">
+  <p>Using Rails migrations with databases that do not support <a href="http://www.sql-workbench.net/dbms_comparison.html">DDL Transactions</a> like Oracle and MySQL can be a pain.  Recently, on project where we are using Postgres for development and Oracle in production, I ran into a case where I needed to run a conditional migration to fix schema for production.</p>
+
+<h3>The Problem</h3>
+
+<p>While using ActiveRecord does help to make switching databases easier there are some database specific constraints that it doesn&#39;t completely solve.</p>
+
+<p>For example, Oracle has a limit on the number of characters used for an index name, 30, and limits you to one index per column.</p>
+
+<p>Because we have to manually specify index names in migrations to get them under 30 characters it&#39;s possible to make mistakes like the following, specifying two indexes for the same column.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">class</span> <span class="nc">AddPostIndexes</span> <span class="o">&lt;</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Migration</span>
+  <span class="k">def</span> <span class="nf">change</span>
+    <span class="n">add_index</span> <span class="ss">:posts</span><span class="p">,</span> <span class="ss">:author_id</span><span class="p">,</span> <span class="p">{</span> <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;post_author_idx&#39;</span> <span class="p">}</span>
+    <span class="n">add_index</span> <span class="ss">:posts</span><span class="p">,</span> <span class="ss">:author_id</span><span class="p">,</span> <span class="p">{</span> <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;post_editor_idx&#39;</span> <span class="p">}</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>In Postgres this is fine as you can have multiple indexes for the same column.  But in Oracle the migration will fail when it tries  to add the second index.</p>
+
+<h3>Solution</h3>
+
+<p>To fix this problem from happening in the future we can edit the migration to be correct.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">class</span> <span class="nc">AddPostIndexes</span> <span class="o">&lt;</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Migration</span>
+  <span class="k">def</span> <span class="nf">change</span>
+    <span class="n">add_index</span> <span class="ss">:posts</span><span class="p">,</span> <span class="ss">:author_id</span><span class="p">,</span> <span class="p">{</span> <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;post_author_idx&#39;</span> <span class="p">}</span>
+    <span class="n">add_index</span> <span class="ss">:posts</span><span class="p">,</span> <span class="ss">:editor_id</span><span class="p">,</span> <span class="p">{</span> <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;post_editor_idx&#39;</span> <span class="p">}</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>However, that doesn&#39;t solve the issue of the local development databases that are already incorrect.  To solve this we&#39;ll need to use a conditional migration to remove the old index.</p>
+
+<h3>Conditional Migration</h3>
+
+<p>Thankfully ActiveRecord gives us a way to query the <a href="http://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/PostgreSQL/SchemaStatements.html#method-i-indexes">indexes</a> of each table and we can use this information to write a migration that will remove the incorrect <code>post_editor_idx</code> if it exists and allow us to add the right index.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">class</span> <span class="nc">FixPostIndexes</span> <span class="o">&lt;</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Migration</span>
+  <span class="k">def</span> <span class="nf">up</span>
+    <span class="n">indexes</span> <span class="o">=</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Base</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">indexes</span><span class="p">(</span><span class="ss">:posts</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">indexes</span><span class="o">.</span><span class="n">map</span> <span class="p">{</span> <span class="o">|</span><span class="n">i</span><span class="o">|</span> <span class="n">i</span><span class="o">.</span><span class="n">name</span> <span class="p">}</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s1">&#39;post_editor_idx&#39;</span><span class="p">)</span>
+      <span class="n">remove_index</span> <span class="ss">:posts</span><span class="p">,</span> <span class="p">{</span> <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;post_editor_idx&#39;</span> <span class="p">}</span>
+    <span class="k">end</span>
+    <span class="n">add_index</span> <span class="ss">:posts</span><span class="p">,</span> <span class="ss">:editor_id</span><span class="p">,</span> <span class="p">{</span> <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;post_editor_idx&#39;</span> <span class="p">}</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">down</span>
+    <span class="n">remove_index</span> <span class="ss">:posts</span><span class="p">,</span> <span class="p">{</span> <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;post_editor_idx&#39;</span> <span class="p">}</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>With this solution we can now have other developers run the new migration and their local development database will be up to date.  If we had just changed the already run migration <code>AddPostIndexes</code> then other developers would have needed to drop and recreate their databases from scratch.</p>
+
+<p>ActiveRecord also gives a method to query the table <a href="http://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/PostgreSQL/SchemaStatements.html#method-i-columns">columns</a> in the same way as indexes.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2014/04/03/static-lists/">
+          <span class="article-title">Static Lists: Database Table, Module, or Enums</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/26/ruby-database-sharding-sequel/">
+          <span class="article-title">Ruby Database Sharding with Sequel</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/07/oracle-connection-hanging-ruby/">
+          <span class="article-title">Oracle connection hanging in Ruby</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

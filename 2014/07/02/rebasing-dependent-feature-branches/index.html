@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Rebasing Dependent Feature Branches</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="git,workflow" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Rebasing Dependent Feature Branches
+</h2>
+
+<p class="meta">
+  02 Jul 2014
+  
+    <a class="article-tag" href="/tags/git">git</a>
+  
+    <a class="article-tag" href="/tags/workflow">workflow</a>
+  
+</p>
+
+<div class="post">
+  <p>In a recent post I wrote about the <a href="http://www.calebwoods.com/2014/03/22/simple-git-merge-strategy/">&#39;Simple&#39; Git Merge Strategy</a> that I&#39;ve been using on my recent projects.</p>
+
+<p>This post will look at how to resolve the issue of rebasing on <code>master</code> when your feature branch was started from another feature branch which has since been rebased and merged.</p>
+
+<h3>Background</h3>
+
+<p>For this post we will assume the following branches: <code>master</code>, <code>feature1</code>, and <code>feature2</code>. We will assume that <code>feature1</code> is a work in progress, however, it contains changes we need to build off of for <code>feature2</code>.</p>
+
+<p>We will also be using the strategy of rebasing on <code>master</code> and squashing commits before merging.</p>
+
+<h3>Setting the stage</h3>
+
+<p>Our git repo contains just one file, <code>file.txt</code>, which on <code>master</code> looks like:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">content
+</code></pre></div>
+<p>In our <code>feature1</code> branch we have made two commits, B and C, which result in the following state:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">content
+edit1
+edit2
+</code></pre></div>
+<p>We also have another branch, <code>feature2</code>, which is based on <code>feature1</code> and has one commit, D, to add another edit. The final <code>file.txt</code> looks like:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">content
+edit1
+edit2
+edit3
+</code></pre></div>
+<p>This results in the following git history:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text"> A
+ o  master
+  \
+   B   C
+   o---o  feature1
+        \
+         D
+         o  feature2
+</code></pre></div>
+<h3>Merging <code>feature1</code></h3>
+
+<p>Let&#39;s say that we are now ready to merge in our <code>feature1</code> branch, but first we will squash our two commits into one.  Once we&#39;ve squashed, we&#39;ll merge into <code>master</code>. Also, as a matter of clean up, we&#39;ll delete our <code>feature1</code> branch as we don&#39;t need it any more.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">git checkout feature1
+git rebase -i HEAD~2
+
+git checkout master
+git merge --no--ff feature1
+
+git branch -d feature1
+</code></pre></div>
+<p>The resulting git history will look like this:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text"> A   E
+ o---o  master
+  \
+   B   C   D
+   o---o---o  feature2
+</code></pre></div>
+<p>As we can see, it now looks like our <code>feature2</code> branch has three commits different from <code>master</code>. Additionally, our master branch has now moved on.</p>
+
+<h3>Rebasing <code>feature2</code></h3>
+
+<p>What we&#39;d like to do at this point is rebase our <code>feature2</code> on <code>master</code> and end up with only one commit, D, in our branch, which is our unique change. Our desired history would look like:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text"> A   E
+ o---o  master
+      \
+       D
+       o  feature2
+</code></pre></div>
+<p>Normally to achieve this we would just <code>git rebase master</code>, however, since the history for <code>feature1</code> was rewritten we&#39;ll get merge conflicts.</p>
+
+<p>Instead, we can use the <a href="http://git-scm.com/docs/git-rebase#_options">--onto option</a> for our rebase. Using <code>--onto</code> we can specify our <code>&lt;newbase&gt;</code>, <code>master</code>, and the <code>&lt;upstream&gt;</code> to compare against for the rebase.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">git rebase --onto &lt;newbase&gt; &lt;upstream&gt;
+</code></pre></div>
+<p>When doing a default rebase the <code>&lt;upstream&gt;</code> will be the first commit where the branch diverged from the base branch, <code>master</code>. In our case that would be the first commit from the old <code>feature1</code> branch, or, B.</p>
+
+<p>What we want to do is tell git to ignore the two commits from <code>feature1</code>, B and C, and only rebase our commit, D, onto <code>master</code>. To do this, we pass the SHA for D as the <code>&lt;upstream&gt;</code> option like this:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">git checkout feature2
+git rebase --onto master HEAD~1
+</code></pre></div>
+<p>In addition to <code>HEAD~1</code>, we could have passed an actual SHA <code>6f74799</code> or any other way of referencing the commit we wanted to start from.</p>
+
+<p>I will note that the commit you specify in the <code>&lt;upstream&gt;</code> option will be included in the rebase. This is different from how an <a href="http://git-scm.com/docs/git-rebase#_interactive_mode">interactive rebase</a> works.</p>
+
+<h3>Notes</h3>
+
+<p>This way of rebasing expects that you can determine where <code>feature1</code>&#39;s history ends and <code>feature2</code>&#39;s history begins. If that is not possible then you might want to consider strategies for labeling the first commit of your branch, or not deleting merged branches right away.</p>
+
+<p>This post builds on the &quot;hard case&quot; of recovering from an upstream rebase which you can read about in the <a href="http://git-scm.com/docs/git-rebase#_recovering_from_upstream_rebase">docs for git rebase</a>.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2014/03/22/simple-git-merge-strategy/">
+          <span class="article-title">'Simple' Git Merge Strategy</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2017/02/23/navigate-by-word-iterm2/">
+          <span class="article-title">Navigate by Word in iTerm2</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2016/01/23/naming-software-projects/">
+          <span class="article-title">Naming Projects</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

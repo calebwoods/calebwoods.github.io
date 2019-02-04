@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Intermittent Offline System Tests</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="testing,offline,rails" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Intermittent Offline System Tests
+</h2>
+
+<p class="meta">
+  02 Feb 2019
+  
+    <a class="article-tag" href="/tags/testing">testing</a>
+  
+    <a class="article-tag" href="/tags/offline">offline</a>
+  
+    <a class="article-tag" href="/tags/rails">rails</a>
+  
+</p>
+
+<div class="post">
+  <p>As a new feature for <a href="https://ninjamasterapp.com/">Ninja Master</a>, my team wanted to better support the intermittent connections users may experience while running competitions. The typical usage is on a phone (over WiFi or LTE) in a large metal building which will likely have lots of interference.</p>
+
+<p>To solve this we implemented some special error handling for intermittent connections to ensure users could keep timing their competition and only require a solid connection for the final submission of run data to the server.</p>
+
+<h3>Manual Testing</h3>
+
+<p><img src="/images/offline/manual_offline.gif" alt="Manual Offline Testing">
+<small>&copy; 2019 RoleModel Software, Inc</small></p>
+
+<p>Using the Chrome DevTools it is pretty easy to <a href="https://developers.google.com/web/ilt/pwa/tools-for-pwa-developers#simulate_offline_behavior">simulate offline behavior</a> with a checkbox. This worked great for spiking the functionality, but I still wanted to find a way to add coverage for this new behavior to our <a href="https://relishapp.com/rspec/rspec-rails/docs/system-specs/system-spec">RSpec System tests</a>.</p>
+
+<h3>Programatic Solution</h3>
+
+<p>A common solution I&#39;ve seen mentioned when searching on this topic is to add a Rack Middleware around your application that will return error codes when a global variable is set by your test runner. This could have worked, but didn&#39;t seem as clean, especially for quickly toggle the offline mode on and off. Given that we are already using Chromedriver and Selenium for our System tests I started looking for a simple way to hook into the network features in Chrome DevTools.</p>
+
+<p>After doing some spelunking in Pry, I discovered that through a <a href="https://seleniumhq.github.io/selenium/docs/api/rb/Selenium/WebDriver/DriverExtensions/HasNetworkConditions.html">Selenium Extension</a>, Chromedriver exposes a couple methods for reading and manipulating the Network Conditions: <code>network_conditions</code> and <code>network_conditions=</code>. Note that the documentation mentions that this is a Private API.</p>
+
+<h3>Toggling Offline</h3>
+
+<p>In the System tests, I simply access Selenium through Capybara to set offline mode with:</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="n">page</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">browser</span><span class="o">.</span><span class="n">network_conditions</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="ss">latency</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="ss">throughput</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="ss">offline</span><span class="p">:</span> <span class="kp">true</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Then to go back online simply update the <code>offline</code> and <code>throughput</code> parameters:</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="n">page</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">browser</span><span class="o">.</span><span class="n">network_conditions</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="ss">latency</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="ss">throughput</span><span class="p">:</span> <span class="mi">1_000_000</span><span class="p">,</span>
+  <span class="ss">offline</span><span class="p">:</span> <span class="kp">false</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>To make things clearer I also wrapped these commands into <code>go_offline</code> and <code>go_online</code> helper methods.</p>
+
+<p><img src="/images/offline/automated_offline.gif" alt="Automated Offline Testing">
+<small>&copy; 2019 RoleModel Software, Inc</small></p>
+
+<p>I&#39;m really happy with how this approach turned out. It provides a simple way to ensure that offline or intermittent connection behavior can be driven by tests and doesn&#39;t require messing with global variables or Rack middleware.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2017/03/08/testing-apis-json-schema/">
+          <span class="article-title">Testing Rails APIs with JSON Schema</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/11/01/testing-react-components-rails/">
+          <span class="article-title">Testing React Components in Rails</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/02/23/poltergeist-angular-rails/">
+          <span class="article-title">Poltergeist with Rails and Angular</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

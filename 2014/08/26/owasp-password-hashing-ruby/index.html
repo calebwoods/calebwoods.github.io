@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>OWASP Password Hashing in Ruby</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="ruby,security" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  OWASP Password Hashing in Ruby
+</h2>
+
+<p class="meta">
+  26 Aug 2014
+  
+    <a class="article-tag" href="/tags/ruby">ruby</a>
+  
+    <a class="article-tag" href="/tags/security">security</a>
+  
+</p>
+
+<div class="post">
+  <p>This week I&#39;ve been working on extracting a Ruby service for authentication out of a legacy Java application.  This particular application was using a version of the <a href="https://www.owasp.org/index.php/Hashing_Java">OWASP Hashing example for Java</a> which prompted me to do some research on secure passwords.</p>
+
+<h3>What makes a secure password?</h3>
+
+<p>The Java code I was replacing linked to the <a href="https://www.owasp.org/index.php/Main_Page">Open Web Application Security Project</a>, a non-profit promoting best practices for security in web applications. OWASP defines a secure password as having three qualities:</p>
+
+<ol>
+<li>Hashed</li>
+<li>Salted</li>
+<li>Hardened</li>
+</ol>
+
+<h3>Hashed</h3>
+
+<p><a href="https://www.owasp.org/index.php/Hashing_Java">OWASP</a> explains: &quot;A Hash function creates a fixed length small fingerprint (or message digest) from an unlimited input string.&quot; As web developers, most of us are familiar with MD5 or SHA hashing functions.  </p>
+
+<p>Using a one-way hashing function increases security as the actual plain text passwords are not present in the datastore.</p>
+
+<h3>Salted</h3>
+
+<p>A drawback to hashed passwords is that a hash of the two plain text passwords would be identical.  Because of this, if they had database access an attacker could use a database of precomputed hashes to look up common passwords.</p>
+
+<p>A salt, however, is a random string of a fixed length that is added to the plain text password before it is hashed.  This results in a unique hash for each password in a database.  Salts are usually stored in plain text along with the hash and used for checking matches.</p>
+
+<h3>Hardened</h3>
+
+<p>The third technique is to harden the password by hashing the hash.  This process should be repeated a minimum of 1,000 times according to the <a href="http://tools.ietf.org/html/rfc2898#section-4.2">RSA PKCS5 standard</a>.  </p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">hash(hash(hash(hash(...hash(password + salt)))))
+</code></pre></div>
+<p>The goal is that this process increases the amount of time an attacker&#39;s script needs to spend hashing passwords, thus slowing down the attack.  Further, as server hardware improves the recommended amount of iterations will need to increase.</p>
+
+<h3>Ruby example</h3>
+
+<p>The <a href="https://www.owasp.org/index.php/Hashing_Java">OWASP website</a> gives a full example for using these techniques in Java. Below is an example of what the same hashing function looks like in Ruby.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">compute_hash</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">salt</span><span class="p">)</span>
+  <span class="n">digestor</span> <span class="o">=</span> <span class="no">Digest</span><span class="o">::</span><span class="no">SHA1</span><span class="o">.</span><span class="n">new</span>
+  <span class="n">input</span> <span class="o">=</span> <span class="n">digestor</span><span class="o">.</span><span class="n">digest</span><span class="p">(</span><span class="n">salt</span> <span class="o">+</span> <span class="n">password</span><span class="p">)</span>
+
+  <span class="mi">1000</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">inject</span><span class="p">(</span><span class="n">input</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">reply</span><span class="o">|</span>
+    <span class="n">digestor</span><span class="o">.</span><span class="n">digest</span><span class="p">(</span><span class="n">reply</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>Note that the <code>SHA1</code> algorithm can be switched for a more secure one such as <code>SHA256</code> or <code>SHA512</code> by requiring <code>&#39;digest/sha2&#39;</code>.</p>
+
+<h3>Rails</h3>
+
+<p>Armed with this knowledge, let&#39;s look at how the Rails framework helps us solve this problem.  As of Rails 3.1 <a href="https://github.com/rails/rails/blob/master/activemodel/lib/active_model/secure_password.rb">has<em>secure</em>password</a> provides a simple interface to use <a href="https://github.com/codahale/bcrypt-ruby">bcrypt</a> for hashing passwords.  Bcrypt gives a nice interface for creating and comparing salted and hashed passwords.  </p>
+
+<p>To handle hardening, Bcrypt has a option called cost which will harden your password. By default the factor is 10 which works out to 1,024 iterations, 2^10.  Also, the cost is encoded in the resulting hash so it can be increased overtime and existing passwords will continue to work.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="c1"># bcrypt-ruby example</span>
+<span class="n">my_password</span> <span class="o">=</span> <span class="no">BCrypt</span><span class="o">::</span><span class="no">Password</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s2">&quot;my password&quot;</span><span class="p">)</span>
+  <span class="c1">#=&gt; &quot;$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa&quot;</span>
+
+<span class="n">my_password</span><span class="o">.</span><span class="n">version</span>              <span class="c1">#=&gt; &quot;2a&quot;</span>
+<span class="n">my_password</span><span class="o">.</span><span class="n">cost</span>                 <span class="c1">#=&gt; 10</span>
+<span class="n">my_password</span> <span class="o">==</span> <span class="s2">&quot;my password&quot;</span>     <span class="c1">#=&gt; true</span>
+<span class="n">my_password</span> <span class="o">==</span> <span class="s2">&quot;not my password&quot;</span> <span class="c1">#=&gt; false</span>
+</code></pre></div>
+<h3>Conclusion</h3>
+
+<p>Security standards are important to keep up on.  Thankfully the most common tools in the Rails ecosystem, <a href="https://github.com/rails/rails/blob/master/activemodel/lib/active_model/secure_password.rb">has<em>secure</em>password</a> and <a href="https://github.com/plataformatec/devise">Devise</a>, use these recommended techniques.  However, it is still good to know the principles when evaluating authentication systems or building password hashing in another language.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2014/05/10/angularjs-ie9-cors-nginx/">
+          <span class="article-title">Angular.js, IE9, CORS, and Nginx</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/10/19/choosing-frontend-form-data-heavy-applications/">
+          <span class="article-title">Choosing a Frontend for Form and Data Heavy Applications</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/08/23/minimal-blogging-infrastructure/">
+          <span class="article-title">Minimal Blogging Infrastructure with Jekyll, Github, and Wercker</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

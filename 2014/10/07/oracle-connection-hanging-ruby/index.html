@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Oracle connection hanging in Ruby</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="ruby,debugging,oracle,database" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Oracle connection hanging in Ruby
+</h2>
+
+<p class="meta">
+  07 Oct 2014
+  
+    <a class="article-tag" href="/tags/ruby">ruby</a>
+  
+    <a class="article-tag" href="/tags/debugging">debugging</a>
+  
+    <a class="article-tag" href="/tags/oracle">oracle</a>
+  
+    <a class="article-tag" href="/tags/database">database</a>
+  
+</p>
+
+<div class="post">
+  <p>Recently, I came across a database issue on a client project  that I&#39;d never seen before, so I wanted to document it here incase anyone else runs into a similar issue.</p>
+
+<h3>The Problem</h3>
+
+<p>The stack was a Ruby on Rails API using the <a href="https://github.com/jeremyevans/sequel">Sequel</a> gem to connect to an Oracle database deployed with <a href="http://unicorn.bogomips.org/">Unicorn</a> and <a href="http://nginx.org/">nginx</a>.  This API also had an <a href="https://angularjs.org/">Angular.js</a> client that was connecting to it.</p>
+
+<p>Users started to notice that when accessing the app the requests would sometimes go on indefinitely. Looking into the logs, we were able to see that the Unicorn workers were killed after 60 seconds, resulting in nginx returning a 504 to the client.</p>
+
+<p>An important detail that took us a while to figure out was: this issue would only happen if the Unicorn worker handling the request had been idle for more than 60 minutes.</p>
+
+<h3>The Diagnosis</h3>
+
+<p>As with most errors, the first step was to examine the logs to determine what the error might be, however, because the worker&#39;s process was hanging and being killed by Unicorn there were no errors in the Rails logs.</p>
+
+<p>To further debug the issue we deployed increased logging to the API around the endpoint where we had seen the error so that we could see where app was hanging.  This made it possible to see that the app was querying the Oracle database when it was hanging.</p>
+
+<h3>Firewall</h3>
+
+<p>This application was deployed into a infrastructure controlled by our client. Upon finding that the connection to the database was the issue, we began examining the part of the infrastructure that sat between our app and the database.</p>
+
+<p>As it turned out, there was a firewall in our production environment that was configured to kill inactive TCP connections after 60 minutes of inactivity, a fairly common security measure to limit inactive connections.  The issue for our app was that when the firewall killed the connection the Oracle Instant Client couldn&#39;t see that the connection wasn&#39;t valid and still tried to use it.</p>
+
+<p>Unfortunately, the way the firewall killed the connection created a kind of &quot;black hole&quot; were when querying using the Oracle client it seemed that the server got the request and it was just waiting for a response. This is due to the fact that the firewall would drop all packets after the connection was killed.</p>
+
+<h3>Duplicating Locally</h3>
+
+<p>To make it easier to diagnose the issue I used iptables, a common software firewall, on a Vagrant VM running Oracle to reproduce the dropping of packets.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">iptables -A INPUT -p tcp --dport 1521 -j DROP
+</code></pre></div>
+<h3>Solutions</h3>
+
+<p>Once I was able to duplicate the issue we could then try several solutions to solve the problem.</p>
+
+<p>To prevent the firewall from killing the TCP connection we set a <code>SQLNET.EXPIRE_TIME</code> value in sqlnet.ora which has the Oracle client check that the connection is valid every X number of minutes. We set that check at less than 60 minutes so that the firewall&#39;s inactive threshold will never be met.</p>
+
+<p>Additionally, we set a <code>SQLNET.RECV_TIMEOUT</code> value in sqlnet.ora which specifies the number of seconds to wait for a response from the database. By setting this value we will get an exception logged if a response does not come back before the timeout.</p>
+
+<h3>Conclusion</h3>
+
+<p>Getting to the bottom of this issue definitely reminded me of the value in knowing how to debug code through the entire stack of the project. While many can be found in code, some bugs are specific to the environment configuration and would not be found in development unless there was a mirrored environment.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2014/10/26/ruby-database-sharding-sequel/">
+          <span class="article-title">Ruby Database Sharding with Sequel</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2014/06/04/fog-rackspace-cloudfiles/">
+          <span class="article-title">Fog and Slow Rackspace Cloud Files Requests</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2014/12/23/fix-partial-rails-migration/">
+          <span class="article-title">Fix Partial Rails Migration</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

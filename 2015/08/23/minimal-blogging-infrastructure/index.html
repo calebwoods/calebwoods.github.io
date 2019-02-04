@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Minimal Blogging Infrastructure with Jekyll, Github, and Wercker</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="writing,ruby,git" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Minimal Blogging Infrastructure with Jekyll, Github, and Wercker
+</h2>
+
+<p class="meta">
+  23 Aug 2015
+  
+    <a class="article-tag" href="/tags/writing">writing</a>
+  
+    <a class="article-tag" href="/tags/ruby">ruby</a>
+  
+    <a class="article-tag" href="/tags/git">git</a>
+  
+</p>
+
+<div class="post">
+  <p>Over the past couple of years I&#39;ve made a concerted effort to write a blog post at least once a month.  My motivation for this goal has been to improve my writing overall and use my blog as a playground to document my latest experiments or crazy bug fixes.</p>
+
+<p>Forcing myself into this habit has been great for learning.  In order to write up a post of something that I&#39;ve learned it really takes digging into it just a bit deeper to organize my thoughts, and I&#39;ve found that this helps make the lessons stick.  I&#39;ve also found myself referencing my own posts months later to recall something I&#39;ve learned.</p>
+
+<h3>Getting Started</h3>
+
+<p>Before I started writing on my own blog I&#39;d done some occasional writing elsewhere and found that not having a simple way to quick post an idea resulted not posting at all.</p>
+
+<p>To get to point where publishing was easy I wanted to have a process for writing posts that was minimal enough to help me focus on writing.  Also wanted to be able to write in <a href="https://help.github.com/articles/github-flavored-markdown/">Github flavored Markdown</a> like I do throughout the day when I&#39;m working on projects.</p>
+
+<p>Ruby being my go to language these days and wanting to give <a href="https://help.github.com/articles/using-jekyll-with-pages/">Github pages</a> a try for hosting, I settled on using <a href="http://jekyllrb.com/">Jekyll</a> for my blog.</p>
+
+<h3>Plugins</h3>
+
+<p>One limiting factor of Github pages and its auto building feature for Jekyll sites is that you can&#39;t use plugins.</p>
+
+<p>To get around this problem I created a <a href="https://github.com/calebwoods/calebwoods.github.io/blob/source/Rakefile">rake task</a> that would build my site locally in a git repo and force push to Github pages. </p>
+
+<p>This means once I finish a post all I need to do is run <code>rake publish</code> and it will deploy the static files to Github.</p>
+
+<h3>Writing from Anywhere</h3>
+
+<p>This setup works pretty well, but it did create a bit of a problem where the only way I could publish a new blog post was on my main development machine where I had a full Ruby setup.  Definitely not very minimal.  Instead I wanted to be able to complete my full writing workflow from my <a href="https://www.google.com/chromebook/">Chromebook</a> to avoid the distractions of my main work computer.</p>
+
+<p>After looking at ways of setting of Git and Ruby on the Chromebook I finally settled on the requirement to be able to use a web browser.  Because my site is a repo on Github the file creation and web editing aspect is solved.  Github&#39;s markdown editor in full screen is actually a  very nice distraction free way to write a blog post.</p>
+
+<p>This meant I just needed a way to deploy from a browser to complete my setup.</p>
+
+<h3>Deployment Pipeline</h3>
+
+<p>I&#39;ve used a number of Continue Integration services, but for my last few personal projects I&#39;ve been using <a href="http://wercker.com/">Wercker</a>.</p>
+
+<p>My setup is pretty simple and all the build steps are defined as a <a href="https://github.com/calebwoods/calebwoods.github.io/blob/source/wercker.yml">wercker.yml</a> file.  On each push to my Github repo a wercker build is kicked off which installs the needed gems and builds the Jekyll site.</p>
+
+<p>If that succeeds then I can kick off the deployment which again builds the environment and runs the same rake tasks that I could run in my local Ruby environment.  Wercker also make it easy to set ENV variables and SSH keys which I use to be able to connect to <a href="https://www.algolia.com/">Algolia</a> and store an SSH key for Github.</p>
+
+<p>Overall I&#39;ve been pleased with this setup and have become a big fan of using static sites, especially when paired with a Javascript frontend.  It&#39;s just enough flexibility to allow me to experiment and make the site my own and while adding the right kind of constraints to push me back to actually writing blog posts.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2014/12/22/git-status-bash-prompt/">
+          <span class="article-title">Git Status in Your Bash Prompt</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2014/07/02/rebasing-dependent-feature-branches/">
+          <span class="article-title">Rebasing Dependent Feature Branches</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2014/03/22/simple-git-merge-strategy/">
+          <span class="article-title">'Simple' Git Merge Strategy</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

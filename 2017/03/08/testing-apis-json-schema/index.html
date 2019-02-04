@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Testing Rails APIs with JSON Schema</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="testing,api,rails,json" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Testing Rails APIs with JSON Schema
+</h2>
+
+<p class="meta">
+  08 Mar 2017
+  
+    <a class="article-tag" href="/tags/testing">testing</a>
+  
+    <a class="article-tag" href="/tags/api">api</a>
+  
+    <a class="article-tag" href="/tags/rails">rails</a>
+  
+    <a class="article-tag" href="/tags/json">json</a>
+  
+</p>
+
+<div class="post">
+  <p>Recently got a chance to experiment with using JSON Schema to test-drive new APIs. My motivation behind this was to find a better way to document and more thoroughly test an API with low overhead.</p>
+
+<p>In the past, I&#39;ve used tools like <a href="http://swagger.io/">Swagger</a> and <a href="https://github.com/ruby-grape/grape-entity">Grape Entity</a> to provide auto-generated API docs, but it wasn&#39;t integrated into tests and require duplication of similar information.</p>
+
+<p>Another large project of mine used a custom documentation toolchain of rake, markdown, and curl to execute and record requests to a development server embedded in markdown documentation. This worked well, but had to be manually kept up to date as changes to the API couldn&#39;t easily be detected.</p>
+
+<p>Ultimately I want a way to get decent API documentation (entity structure and endpoints) extracted from my tests.  At one point I even experimented with building an RSpec formatter to generate documentation.</p>
+
+<p>So when I saw a <a href="https://robots.thoughtbot.com/validating-json-schemas-with-an-rspec-matcher">blog post</a> about using <a href="http://json-schema.org/">JSON Schema</a> to test APIs I wanted to explore it further to see what was possible.</p>
+
+<h2>Creating the schema</h2>
+
+<p><a href="http://json-schema.org/">JSON Schema</a>, at a basic level, gives you a way to describe properties and types of a JSON structure. It also has support for composing schemas which I found useful for API testing.</p>
+
+<p>For our RSpec setup, we will put all our schemas under <code>spec/support/schemas</code>.  In this folder I created a special <code>definitions.json</code> file which describes all the entities in the API. Similar to how you might have <code>spec/support/factories.rb</code> define all your test factories.</p>
+<div class="highlight"><pre><code class="language-json" data-lang="json"><span class="err">//</span> <span class="err">definitions.json</span>
+
+<span class="p">{</span>
+  <span class="nt">&quot;definitions&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;author&quot;</span> <span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;required&quot;</span> <span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;active&quot;</span>
+      <span class="p">],</span>
+      <span class="nt">&quot;properties&quot;</span> <span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;id&quot;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;integer&quot;</span> <span class="p">},</span>
+        <span class="nt">&quot;name&quot;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;string&quot;</span> <span class="p">},</span>
+        <span class="nt">&quot;active&quot;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;boolean&quot;</span> <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;comment&quot;</span> <span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;required&quot;</span> <span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;content&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;author&quot;</span>
+      <span class="p">],</span>
+      <span class="nt">&quot;properties&quot;</span> <span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;id&quot;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;integer&quot;</span> <span class="p">},</span>
+        <span class="nt">&quot;content&quot;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;string&quot;</span> <span class="p">},</span>
+        <span class="nt">&quot;author&quot;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;$ref&quot;</span> <span class="p">:</span> <span class="s2">&quot;#/definitions/author&quot;</span> <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;post&quot;</span> <span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;required&quot;</span> <span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;content&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;author&quot;</span>
+      <span class="p">],</span>
+      <span class="nt">&quot;properties&quot;</span> <span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;id&quot;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;integer&quot;</span> <span class="p">},</span>
+        <span class="nt">&quot;title&quot;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;string&quot;</span> <span class="p">},</span>
+        <span class="nt">&quot;content&quot;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;type&quot;</span> <span class="p">:</span> <span class="s2">&quot;string&quot;</span> <span class="p">},</span>
+        <span class="nt">&quot;author&quot;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;$ref&quot;</span> <span class="p">:</span> <span class="s2">&quot;#/definitions/author&quot;</span> <span class="p">},</span>
+        <span class="nt">&quot;comments&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;array&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;items&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;$ref&quot;</span><span class="p">:</span> <span class="s2">&quot;#/definitions/comment&quot;</span> <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Then I also created a series of API endpoint specific files such as <code>posts.json</code> that describe how that specific API endpoint uses the schema definitions.</p>
+<div class="highlight"><pre><code class="language-json" data-lang="json"><span class="err">//</span> <span class="err">posts.json</span>
+<span class="p">{</span>
+  <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;required&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;posts&quot;</span><span class="p">],</span>
+  <span class="nt">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;posts&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;array&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;items&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;$ref&quot;</span><span class="p">:</span> <span class="s2">&quot;definitions.json#/definitions/post&quot;</span> <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3>Using in Schema in Tests</h3>
+
+<p>Following the original <a href="https://robots.thoughtbot.com/validating-json-schemas-with-an-rspec-matcher">blog post</a> I created a RSpec matcher to make matching schemas in tests easier.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="c1"># spec/support/api_schema_matcher.rb</span>
+
+<span class="no">RSpec</span><span class="o">::</span><span class="no">Matchers</span><span class="o">.</span><span class="n">define</span> <span class="ss">:match_response_schema</span> <span class="k">do</span> <span class="o">|</span><span class="n">schema</span><span class="o">|</span>
+  <span class="n">match</span> <span class="k">do</span> <span class="o">|</span><span class="n">response</span><span class="o">|</span>
+    <span class="n">schema_directory</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="no">Dir</span><span class="o">.</span><span class="n">pwd</span><span class="si">}</span><span class="s2">/spec/support/schemas&quot;</span>
+    <span class="n">schema_path</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">schema_directory</span><span class="si">}</span><span class="s2">/</span><span class="si">#{</span><span class="n">schema</span><span class="si">}</span><span class="s2">.json&quot;</span>
+    <span class="no">JSON</span><span class="o">::</span><span class="no">Validator</span><span class="o">.</span><span class="n">validate!</span><span class="p">(</span>
+      <span class="n">schema_path</span><span class="p">,</span>
+      <span class="n">response</span><span class="o">.</span><span class="n">body</span><span class="p">,</span>
+      <span class="ss">strict</span><span class="p">:</span> <span class="kp">true</span>
+    <span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>This matcher will compare our API <code>response</code> with the <code>schema</code> specified and determine if they match using a class from the <a href="https://github.com/ruby-json-schema/json-schema">json-schema</a> gem.</p>
+
+<p>Then in our tests, we can call our custom matcher to ensure request matches the schema.  In addition I usually &quot;spot check&quot; a couple of the values to ensure the data is correct and not just in the right format.</p>
+
+<p>The schema will be used to validate the types of the rest of the properties and that all require properties are included. Our test will also fail if extra properties that we didn&#39;t define are included in the response.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="c1"># spec/api/posts.rb</span>
+
+<span class="nb">require</span> <span class="s1">&#39;rails_helper&#39;</span>
+
+<span class="no">RSpec</span><span class="o">.</span><span class="n">describe</span> <span class="no">PostsController</span><span class="p">,</span> <span class="ss">type</span><span class="p">:</span> <span class="ss">:request</span> <span class="k">do</span>
+  <span class="n">include_context</span> <span class="s1">&#39;API&#39;</span>
+
+  <span class="n">describe</span> <span class="s1">&#39;GET index&#39;</span> <span class="k">do</span>
+    <span class="n">context</span> <span class="s1">&#39;get all published posts&#39;</span> <span class="k">do</span>
+      <span class="n">let!</span><span class="p">(</span><span class="ss">:author</span><span class="p">)</span> <span class="k">do</span>
+        <span class="no">Author</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span><span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;Test Author&#39;</span><span class="p">)</span>
+      <span class="k">end</span>
+      <span class="n">let!</span><span class="p">(</span><span class="ss">:draft_post</span><span class="p">)</span> <span class="k">do</span>
+        <span class="no">Post</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span>
+          <span class="ss">author</span><span class="p">:</span> <span class="n">author</span><span class="p">,</span>
+          <span class="ss">title</span><span class="p">:</span> <span class="s1">&#39;Draft&#39;</span><span class="p">,</span>
+          <span class="ss">content</span><span class="p">:</span> <span class="s1">&#39;Great stuff&#39;</span>
+        <span class="p">)</span>
+      <span class="k">end</span>
+      <span class="n">let!</span><span class="p">(</span><span class="ss">:published_post</span><span class="p">)</span> <span class="k">do</span>
+        <span class="no">Post</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span>
+          <span class="ss">author</span><span class="p">:</span> <span class="n">author</span><span class="p">,</span>
+          <span class="ss">title</span><span class="p">:</span> <span class="s1">&#39;Published&#39;</span><span class="p">,</span>
+          <span class="ss">published_at</span><span class="p">:</span> <span class="mi">1</span><span class="o">.</span><span class="n">day</span><span class="o">.</span><span class="n">ago</span><span class="p">,</span>
+          <span class="ss">content</span><span class="p">:</span> <span class="s1">&#39;Better stuff&#39;</span>
+        <span class="p">)</span>
+      <span class="k">end</span>
+      <span class="n">let!</span><span class="p">(</span><span class="ss">:comment</span><span class="p">)</span> <span class="k">do</span>
+        <span class="no">Comment</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span>
+          <span class="ss">author</span><span class="p">:</span> <span class="n">author</span><span class="p">,</span>
+          <span class="ss">post</span><span class="p">:</span> <span class="n">published_post</span><span class="p">,</span>
+          <span class="ss">content</span><span class="p">:</span> <span class="s1">&#39;Well done&#39;</span>
+        <span class="p">)</span>
+      <span class="k">end</span>
+
+      <span class="n">before</span> <span class="p">{</span> <span class="n">api_get</span> <span class="s1">&#39;posts&#39;</span> <span class="p">}</span>
+
+      <span class="n">specify</span> <span class="k">do</span>
+        <span class="n">expect</span><span class="p">(</span><span class="n">json_body</span><span class="o">[</span><span class="s1">&#39;posts&#39;</span><span class="o">].</span><span class="n">count</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">eq</span> <span class="mi">1</span>
+        <span class="n">expect</span><span class="p">(</span><span class="n">response</span><span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">match_response_schema</span><span class="p">(</span><span class="s1">&#39;posts&#39;</span><span class="p">)</span>
+        <span class="n">expect</span><span class="p">(</span>
+          <span class="n">json_body</span><span class="o">[</span><span class="s1">&#39;posts&#39;</span><span class="o">].</span><span class="n">first</span><span class="o">[</span><span class="s1">&#39;author&#39;</span><span class="o">][</span><span class="s1">&#39;name&#39;</span><span class="o">]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">to</span> <span class="n">eq</span> <span class="n">author</span><span class="o">.</span><span class="n">name</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>If our server&#39;s response didn&#39;t match the expected schema, we&#39;d see a well-formed error like this:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">JSON::Schema::ValidationError:
+  The property &#39;#/posts/0&#39; did not contain
+  a required property of &#39;author&#39;
+</code></pre></div>
+<h3>Next Steps</h3>
+
+<p>This is a decent example of testing a read-only API, but would like to explore how usage might change when testing create/update responses.  Things would also be a bit different if using <a href="http://jsonapi.org/">JSON API</a> format for your API as relationship are side loaded rather than inlined.</p>
+
+<p>Additionally, I think there is an interesting possibility to create a &quot;documentation viewer&quot; that could parse the schema files and build simple API documentation.  Hope to explore that in a future post.</p>
+
+<p>A full example app for this post is available <a href="https://github.com/calebwoods/json-schema-testing">on my Github account</a>.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2015/10/19/choosing-frontend-form-data-heavy-applications/">
+          <span class="article-title">Choosing a Frontend for Form and Data Heavy Applications</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2019/02/02/intermittent-offline-system-tests/">
+          <span class="article-title">Intermittent Offline System Tests</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/11/01/testing-react-components-rails/">
+          <span class="article-title">Testing React Components in Rails</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

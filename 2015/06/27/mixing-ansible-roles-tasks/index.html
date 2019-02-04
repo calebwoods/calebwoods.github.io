@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Mixing Ansible Roles and Tasks</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="linux,bash,ansible,server,scripting" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Mixing Ansible Roles and Tasks
+</h2>
+
+<p class="meta">
+  27 Jun 2015
+  
+    <a class="article-tag" href="/tags/linux">linux</a>
+  
+    <a class="article-tag" href="/tags/bash">bash</a>
+  
+    <a class="article-tag" href="/tags/ansible">ansible</a>
+  
+    <a class="article-tag" href="/tags/server">server</a>
+  
+    <a class="article-tag" href="/tags/scripting">scripting</a>
+  
+</p>
+
+<div class="post">
+  <p>Over the past couple of weeks I&#39;ve been working on refactoring <a href="http://docs.ansible.com/">Ansible</a> deploy scripts for a client where we are deploying several <a href="http://rubyonrails.org/">Rails</a> based services.</p>
+
+<p>Most of this refactor has been pulling common tasks like setting up <a href="http://unicorn.bogomips.org/">unicorn</a> and <a href="http://nginx.org/">nginx</a> into distinct roles.  Here is a condensed example playbook:</p>
+<div class="highlight"><pre><code class="language-yaml" data-lang="yaml"><span class="nn">---</span>
+<span class="p-Indicator">-</span> <span class="l-Scalar-Plain">hosts</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">all</span>
+
+  <span class="l-Scalar-Plain">pre_tasks</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">upgrade packages</span>
+      <span class="l-Scalar-Plain">apt</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">upgrade=yes update_cache=yes cache_valid_time=300</span>
+      <span class="l-Scalar-Plain">sudo</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">yes</span>
+
+  <span class="l-Scalar-Plain">roles</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">brightbox_ruby</span><span class="p-Indicator">,</span> <span class="nv">ruby_version</span><span class="p-Indicator">:</span> <span class="nv">2.2.2</span> <span class="p-Indicator">}</span>
+    <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">deploy_code</span><span class="p-Indicator">,</span>
+        <span class="nv">git_branch</span><span class="p-Indicator">:</span> <span class="nv">master</span><span class="p-Indicator">,</span>
+        <span class="nv">repo</span><span class="p-Indicator">:</span> <span class="s">&#39;https://github.com/calebwoods/myapp&#39;</span><span class="p-Indicator">,</span>
+        <span class="nv">ruby_env_template</span><span class="p-Indicator">:</span> <span class="s">&#39;templates/production_env.rb&#39;</span> <span class="p-Indicator">}</span>
+    <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">unicorn</span> <span class="p-Indicator">}</span>
+    <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">nginx</span><span class="p-Indicator">,</span> <span class="nv">nginx</span><span class="p-Indicator">:</span> <span class="p-Indicator">{</span> <span class="nv">app</span><span class="p-Indicator">:</span> <span class="s">&#39;myapp&#39;</span> <span class="p-Indicator">}</span> <span class="p-Indicator">}</span>
+    <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">sidekiq</span><span class="p-Indicator">,</span> <span class="nv">apps_dir</span><span class="p-Indicator">:</span> <span class="s">&#39;/var/www&#39;</span> <span class="p-Indicator">}</span>
+
+  <span class="l-Scalar-Plain">post_tasks</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">setup log rotation</span>
+      <span class="l-Scalar-Plain">sudo</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">yes</span>
+      <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">src=templates/logrotate.conf dest=/etc/logrotate.d/myapp.conf</span>
+</code></pre></div>
+<p>In this playbook there are a few <code>pre_tasks</code> which will run before all the roles.  This is useful to get the state of the machine ready for the rest of the playbook such as updating the base packages or installing specific application dependencies. <code>post_tasks</code> or <code>tasks</code> can be used for after the roles have run for similar types of tasks.</p>
+
+<h3>Interleaving commands</h3>
+
+<p>The challenge when refactoring these playbooks was where to put commands like <code>bundle install</code> or <code>rake db:migrate</code>.  These are fairly common and require that prerequisite roles have been executed, such as Ruby being installed.  In addition, later roles like, unicorn and sidekiq, require that those commands have already been run.  Typically these would be done with tasks, but Ansible only gives you the option of running tasks before or after roles.</p>
+
+<p>Additionally, some applications will have rake tasks or other one off commands that need to be run inbetween roles such setting up <a href="https://en.wikipedia.org/wiki/Cron">Cron jobs</a> with <a href="https://github.com/javan/whenever">whenever</a>, <code>bundle exec whenever --update-cron</code>.  So for these reason it would be nice if there was a general solution rather than having to create a new role for every special case.</p>
+
+<h3>Simple solution</h3>
+
+<p>The solution I came up with was to create an Ansible role for running one off bash commands, called <a href="https://github.com/RoleModel/bash_command">bash_command</a>.</p>
+
+<p>The role has two simple inputs: <code>command</code> and <code>dir</code>. <code>command</code> is the string you want to run and can include interpolated Ansible variables.  The command will be using <code>bash -lc</code> through the <code>shell</code> module to run the command which means it runs in a login bash shell, so you will have access to any ENV variables that have been set elsewhere in your playbook.  The <code>dir</code> input specifies where to <code>cd</code> into before running the <code>command</code>.</p>
+
+<p>Here is an example of how the roles section of my playbook would be structured for a Rails application using bundler, <a href="https://github.com/javan/whenever">whenever</a>, database migrations, and precompiling assets:</p>
+<div class="highlight"><pre><code class="language-yaml" data-lang="yaml"><span class="l-Scalar-Plain">roles</span><span class="p-Indicator">:</span>
+  <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">brightbox_ruby</span><span class="p-Indicator">,</span> <span class="nv">ruby_version</span><span class="p-Indicator">:</span> <span class="nv">2.2.2</span> <span class="p-Indicator">}</span>
+  <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">deploy_code</span><span class="p-Indicator">,</span>
+      <span class="nv">git_branch</span><span class="p-Indicator">:</span> <span class="nv">master</span><span class="p-Indicator">,</span>
+      <span class="nv">repo</span><span class="p-Indicator">:</span> <span class="s">&#39;https://github.com/calebwoods/myapp&#39;</span><span class="p-Indicator">,</span>
+      <span class="nv">ruby_env_template</span><span class="p-Indicator">:</span> <span class="s">&#39;templates/production_env.rb&#39;</span> <span class="p-Indicator">}</span>
+  <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">bash_command</span><span class="p-Indicator">,</span>
+      <span class="nv">command</span><span class="p-Indicator">:</span> <span class="s">&#39;bundle</span><span class="nv"> </span><span class="s">install</span><span class="nv"> </span><span class="s">--binstubs</span><span class="nv"> </span><span class="s">bin</span><span class="nv"> </span><span class="s">--without</span><span class="nv"> </span><span class="s">development</span><span class="nv"> </span><span class="s">test</span><span class="nv"> </span><span class="s">--deployment</span><span class="nv"> </span><span class="s">--path</span><span class="nv"> </span><span class="s">vendor/bundle&#39;</span><span class="p-Indicator">,</span>
+      <span class="nv">dir</span><span class="p-Indicator">:</span> <span class="s">&#39;/var/www/myapp&#39;</span> <span class="p-Indicator">}</span>
+  <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">bash_command</span><span class="p-Indicator">,</span>
+      <span class="nv">command</span><span class="p-Indicator">:</span> <span class="s">&#39;bundle</span><span class="nv"> </span><span class="s">exec</span><span class="nv"> </span><span class="s">whenever</span><span class="nv"> </span><span class="s">--update-cron&#39;</span><span class="p-Indicator">,</span>
+      <span class="nv">dir</span><span class="p-Indicator">:</span> <span class="s">&#39;/var/www/myapp&#39;</span> <span class="p-Indicator">}</span>
+  <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">bash_command</span><span class="p-Indicator">,</span>
+      <span class="nv">command</span><span class="p-Indicator">:</span> <span class="s">&#39;bundle</span><span class="nv"> </span><span class="s">exec</span><span class="nv"> </span><span class="s">rake</span><span class="nv"> </span><span class="s">db:migrate&#39;</span><span class="p-Indicator">,</span>
+      <span class="nv">dir</span><span class="p-Indicator">:</span> <span class="s">&#39;/var/www/myapp&#39;</span> <span class="p-Indicator">}</span>
+  <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">bash_command</span><span class="p-Indicator">,</span>
+      <span class="nv">command</span><span class="p-Indicator">:</span> <span class="s">&#39;bundle</span><span class="nv"> </span><span class="s">exec</span><span class="nv"> </span><span class="s">rake</span><span class="nv"> </span><span class="s">assets:precompile</span><span class="nv"> </span><span class="s">assets:clean&#39;</span><span class="p-Indicator">,</span>
+      <span class="nv">dir</span><span class="p-Indicator">:</span> <span class="s">&#39;/var/www/myapp&#39;</span> <span class="p-Indicator">}</span>
+  <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">unicorn</span> <span class="p-Indicator">}</span>
+  <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">nginx</span><span class="p-Indicator">,</span> <span class="nv">nginx</span><span class="p-Indicator">:</span> <span class="p-Indicator">{</span> <span class="nv">app</span><span class="p-Indicator">:</span> <span class="s">&#39;myapp&#39;</span> <span class="p-Indicator">}</span> <span class="p-Indicator">}</span>
+  <span class="p-Indicator">-</span> <span class="p-Indicator">{</span> <span class="nv">role</span><span class="p-Indicator">:</span> <span class="nv">sidekiq</span><span class="p-Indicator">,</span> <span class="nv">apps_dir</span><span class="p-Indicator">:</span> <span class="s">&#39;/var/www&#39;</span> <span class="p-Indicator">}</span>
+</code></pre></div>
+<p>Have other tricks you&#39;ve used to create more reusable Ansible scripts? Tweet at me <a href="https://twitter.com/calebwoods">@calebwoods</a>.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2015/08/02/ssh-ansible-host/">
+          <span class="article-title">SSH to Ansible host by hostname</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/04/06/diy-time-capsule-raspberry-pi/">
+          <span class="article-title">DIY Time Capsule with a Raspberry Pi</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/05/05/vagrant-guest-commands/">
+          <span class="article-title">Running Commands on Vagrant Guest from Host</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

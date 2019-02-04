@@ -1,0 +1,802 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Caleb Woods</title>
+    <description>Personal site of Caleb Woods</description>
+    <link>http://www.calebwoods.com</link>
+    <atom:link href="http://www.calebwoods.com/feed.xml" rel="self" type="application/rss+xml" />
+    
+      <item>
+        <title>Intermittent Offline System Tests</title>
+        <description>&lt;p&gt;As a new feature for &lt;a href=&quot;https://ninjamasterapp.com/&quot;&gt;Ninja Master&lt;/a&gt;, my team wanted to better support the intermittent connections users may experience while running competitions. The typical usage is on a phone (over WiFi or LTE) in a large metal building which will likely have lots of interference.&lt;/p&gt;
+
+&lt;p&gt;To solve this we implemented some special error handling for intermittent connections to ensure users could keep timing their competition and only require a solid connection for the final submission of run data to the server.&lt;/p&gt;
+
+&lt;h3&gt;Manual Testing&lt;/h3&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/offline/manual_offline.gif&quot; alt=&quot;Manual Offline Testing&quot;&gt;
+&lt;small&gt;&amp;copy; 2019 RoleModel Software, Inc&lt;/small&gt;&lt;/p&gt;
+
+&lt;p&gt;Using the Chrome DevTools it is pretty easy to &lt;a href=&quot;https://developers.google.com/web/ilt/pwa/tools-for-pwa-developers#simulate_offline_behavior&quot;&gt;simulate offline behavior&lt;/a&gt; with a checkbox. This worked great for spiking the functionality, but I still wanted to find a way to add coverage for this new behavior to our &lt;a href=&quot;https://relishapp.com/rspec/rspec-rails/docs/system-specs/system-spec&quot;&gt;RSpec System tests&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3&gt;Programatic Solution&lt;/h3&gt;
+
+&lt;p&gt;A common solution I&amp;#39;ve seen mentioned when searching on this topic is to add a Rack Middleware around your application that will return error codes when a global variable is set by your test runner. This could have worked, but didn&amp;#39;t seem as clean, especially for quickly toggle the offline mode on and off. Given that we are already using Chromedriver and Selenium for our System tests I started looking for a simple way to hook into the network features in Chrome DevTools.&lt;/p&gt;
+
+&lt;p&gt;After doing some spelunking in Pry, I discovered that through a &lt;a href=&quot;https://seleniumhq.github.io/selenium/docs/api/rb/Selenium/WebDriver/DriverExtensions/HasNetworkConditions.html&quot;&gt;Selenium Extension&lt;/a&gt;, Chromedriver exposes a couple methods for reading and manipulating the Network Conditions: &lt;code&gt;network_conditions&lt;/code&gt; and &lt;code&gt;network_conditions=&lt;/code&gt;. Note that the documentation mentions that this is a Private API.&lt;/p&gt;
+
+&lt;h3&gt;Toggling Offline&lt;/h3&gt;
+
+&lt;p&gt;In the System tests, I simply access Selenium through Capybara to set offline mode with:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;n&quot;&gt;page&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;driver&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;browser&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;network_conditions&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;latency&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;throughput&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;offline&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Then to go back online simply update the &lt;code&gt;offline&lt;/code&gt; and &lt;code&gt;throughput&lt;/code&gt; parameters:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;n&quot;&gt;page&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;driver&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;browser&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;network_conditions&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;latency&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;throughput&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1_000_000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;offline&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;false&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To make things clearer I also wrapped these commands into &lt;code&gt;go_offline&lt;/code&gt; and &lt;code&gt;go_online&lt;/code&gt; helper methods.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/offline/automated_offline.gif&quot; alt=&quot;Automated Offline Testing&quot;&gt;
+&lt;small&gt;&amp;copy; 2019 RoleModel Software, Inc&lt;/small&gt;&lt;/p&gt;
+
+&lt;p&gt;I&amp;#39;m really happy with how this approach turned out. It provides a simple way to ensure that offline or intermittent connection behavior can be driven by tests and doesn&amp;#39;t require messing with global variables or Rack middleware.&lt;/p&gt;
+</description>
+        <pubDate>Sat, 02 Feb 2019 00:00:00 -0500</pubDate>
+        <link>http://www.calebwoods.com/2019/02/02/intermittent-offline-system-tests/</link>
+        <guid isPermaLink="true">http://www.calebwoods.com/2019/02/02/intermittent-offline-system-tests/</guid>
+      </item>
+    
+      <item>
+        <title>My Experience with Intermittent Fasting</title>
+        <description>&lt;p&gt;I&amp;#39;ve been trying intermittent fasting for the last 6 months as my latest health experiment. It has had a surprisingly positive impact. I&amp;#39;ve wanted to find more ways to share the concept with others, so here is my story.&lt;/p&gt;
+
+&lt;h3&gt;Starting Point&lt;/h3&gt;
+
+&lt;p&gt;I am always looking to apply experiments to my work in software development. In the same way, I&amp;#39;ve tried different health and fitness ideas over the years, with some short-term success.  My wife and I did a strict &lt;a href=&quot;https://en.wikipedia.org/wiki/Paleolithic_diet&quot;&gt;Paleo&lt;/a&gt; diet for 9 months several years ago. Although we didn&amp;#39;t continue eating strictly Paleo, the experience helped shift our diet to more real foods and less carbs.&lt;/p&gt;
+
+&lt;p&gt;Since my oldest child was born 2.5 years ago, however, I&amp;#39;ve found it hard to keep a regular exercise routine going and to keep weight off.  Also, I&amp;#39;ve watched my cholesterol and blood pressure reach the high side of acceptable. I tried simply cutting calories with no success. So I decided it was time to make a change.&lt;/p&gt;
+
+&lt;h3&gt;Getting Started&lt;/h3&gt;
+
+&lt;p&gt;Over the last few years, I&amp;#39;d heard about fasting a few times on various podcasts, but I never tried it. It sounded difficult.&lt;/p&gt;
+
+&lt;p&gt;After hearing about the app &lt;a href=&quot;https://itunes.apple.com/us/app/zero-fasting-tracker/id1168348542?mt=8&quot;&gt;Zero&lt;/a&gt;, however, I decided to give fasting a try. I would stop eating at sunset and fast for a minimum of 13 hours.  Using the app allowed me to track my progress, get alerts, and see some early results correlated to fasting.&lt;/p&gt;
+
+&lt;h3&gt;Theory&lt;/h3&gt;
+
+&lt;p&gt;To learn more about the science behind fasting, I read &lt;a href=&quot;https://www.amazon.com/Complete-Guide-Fasting-Intermittent-Alternate-Day/dp/1628600012&quot;&gt;The Complete Guide to Fasting&lt;/a&gt; by Dr. Jason Fung. Dr. Fung specializes in kidney diseases and has focused on how fasting can reverse Type-2 Diabetes. This is a fascinating book that I highly recommend.&lt;/p&gt;
+
+&lt;p&gt;A major part of the book is Dr. Fung&amp;#39;s explanation of how eating affects your body, particularly related to insulin. Your pancreas produces insulin each time you eat, which then triggers your body to store reserves. This also prevents your body from using fat stores for energy.&lt;/p&gt;
+
+&lt;p&gt;Conversely, a high fat, low carb diet combined with fasting allows your body to more easily enter &lt;a href=&quot;https://en.wikipedia.org/wiki/Ketosis&quot;&gt;Ketosis&lt;/a&gt;, where it burns stored fats for energy.&lt;/p&gt;
+
+&lt;p&gt;When we eat frequently, even if only small amounts, our bodies produce insulin which is used for energy instead of fat, thus making it difficult to get rid of fat stores.&lt;/p&gt;
+
+&lt;h3&gt;Tweaking My Routine&lt;/h3&gt;
+
+&lt;p&gt;Armed with this knowledge, I started doing 24-hour fasts (dinner of one day to dinner of the next) three times per week.&lt;/p&gt;
+
+&lt;p&gt;I expected to be extremely hungry while fasting, but I found that just drinking some water, coffee, or tea when I felt a wave of &amp;quot;hunger&amp;quot; was all that I needed to get back on track. Other than a few such waves, I&amp;#39;ve found that I actually don&amp;#39;t feel that hungry while fasting. As the book explains, &amp;quot;hunger pains&amp;quot; are more related to routine than to our bodies really needing to eat.&lt;/p&gt;
+
+&lt;h3&gt;Reaping the Benefits&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Weight loss&lt;/li&gt;
+&lt;li&gt;Grocery bill savings&lt;/li&gt;
+&lt;li&gt;Simplified morning routine&lt;/li&gt;
+&lt;li&gt;Energy level&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;I feel great on fasting days and don&amp;#39;t miss any fellowship with my family, as I can eat whatever we are having for dinner. I also save time by not eating breakfast or packing lunch.&lt;/p&gt;
+
+&lt;p&gt;Doing calorie reduction diets in the past has left me feeling lethargic all day, but while fasting I feel energized. I have no food coma after lunch, and I have an increased metabolism (&lt;a href=&quot;https://en.wikipedia.org/wiki/Basal_metabolic_rate&quot;&gt;BMR&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;And while still eating normally (mostly Paleo) and not counting calories at all, I&amp;#39;ve lost significant weight: 35 pounds in 6 months.&lt;/p&gt;
+
+&lt;p&gt;Since the 70s, dieting has become a marketing-driven industry and, what do you know, nobody makes money off of you when you just don&amp;#39;t eat. Fasting seems to be making a comeback, though, and I am glad to see more people learning about this simple strategy to improve health.&lt;/p&gt;
+
+&lt;p&gt;After doing it for half a year now, fasting simply makes sense to me. Almost every world religion has a history of fasting, and I can see why, given the benefits. It feels like unlocking a major lifehack that both saves time/money and improves my wellbeing.&lt;/p&gt;
+
+&lt;p&gt;This coming year, I&amp;#39;m planning to try some seven-plus day fasts. I would love to hear if you&amp;#39;ve tried your own fasting experiment!&lt;/p&gt;
+</description>
+        <pubDate>Fri, 29 Dec 2017 00:00:00 -0500</pubDate>
+        <link>http://www.calebwoods.com/2017/12/29/my-experience-intermittent-fasting/</link>
+        <guid isPermaLink="true">http://www.calebwoods.com/2017/12/29/my-experience-intermittent-fasting/</guid>
+      </item>
+    
+      <item>
+        <title>Testing Rails APIs with JSON Schema</title>
+        <description>&lt;p&gt;Recently got a chance to experiment with using JSON Schema to test-drive new APIs. My motivation behind this was to find a better way to document and more thoroughly test an API with low overhead.&lt;/p&gt;
+
+&lt;p&gt;In the past, I&amp;#39;ve used tools like &lt;a href=&quot;http://swagger.io/&quot;&gt;Swagger&lt;/a&gt; and &lt;a href=&quot;https://github.com/ruby-grape/grape-entity&quot;&gt;Grape Entity&lt;/a&gt; to provide auto-generated API docs, but it wasn&amp;#39;t integrated into tests and require duplication of similar information.&lt;/p&gt;
+
+&lt;p&gt;Another large project of mine used a custom documentation toolchain of rake, markdown, and curl to execute and record requests to a development server embedded in markdown documentation. This worked well, but had to be manually kept up to date as changes to the API couldn&amp;#39;t easily be detected.&lt;/p&gt;
+
+&lt;p&gt;Ultimately I want a way to get decent API documentation (entity structure and endpoints) extracted from my tests.  At one point I even experimented with building an RSpec formatter to generate documentation.&lt;/p&gt;
+
+&lt;p&gt;So when I saw a &lt;a href=&quot;https://robots.thoughtbot.com/validating-json-schemas-with-an-rspec-matcher&quot;&gt;blog post&lt;/a&gt; about using &lt;a href=&quot;http://json-schema.org/&quot;&gt;JSON Schema&lt;/a&gt; to test APIs I wanted to explore it further to see what was possible.&lt;/p&gt;
+
+&lt;h2&gt;Creating the schema&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://json-schema.org/&quot;&gt;JSON Schema&lt;/a&gt;, at a basic level, gives you a way to describe properties and types of a JSON structure. It also has support for composing schemas which I found useful for API testing.&lt;/p&gt;
+
+&lt;p&gt;For our RSpec setup, we will put all our schemas under &lt;code&gt;spec/support/schemas&lt;/code&gt;.  In this folder I created a special &lt;code&gt;definitions.json&lt;/code&gt; file which describes all the entities in the API. Similar to how you might have &lt;code&gt;spec/support/factories.rb&lt;/code&gt; define all your test factories.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span class=&quot;err&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;definitions.json&lt;/span&gt;
+
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;quot;definitions&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;quot;author&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;object&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;required&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;name&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;active&amp;quot;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;properties&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;integer&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;name&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;string&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;active&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;boolean&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;quot;comment&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;object&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;required&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;content&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;author&amp;quot;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;properties&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;integer&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;content&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;string&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;author&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;$ref&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;#/definitions/author&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;quot;post&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;object&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;required&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;title&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;content&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;author&amp;quot;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;properties&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;integer&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;title&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;string&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;content&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;string&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;author&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;$ref&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;#/definitions/author&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;quot;comments&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+          &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;array&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+          &lt;span class=&quot;nt&quot;&gt;&amp;quot;items&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;$ref&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;#/definitions/comment&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Then I also created a series of API endpoint specific files such as &lt;code&gt;posts.json&lt;/code&gt; that describe how that specific API endpoint uses the schema definitions.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span class=&quot;err&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;posts.json&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;object&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;quot;required&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;posts&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;quot;properties&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;quot;posts&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;array&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;quot;items&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;&amp;quot;$ref&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;definitions.json#/definitions/post&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Using in Schema in Tests&lt;/h3&gt;
+
+&lt;p&gt;Following the original &lt;a href=&quot;https://robots.thoughtbot.com/validating-json-schemas-with-an-rspec-matcher&quot;&gt;blog post&lt;/a&gt; I created a RSpec matcher to make matching schemas in tests easier.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;c1&quot;&gt;# spec/support/api_schema_matcher.rb&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;RSpec&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Matchers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;define&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:match_response_schema&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;schema&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;match&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;response&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;schema_directory&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Dir&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pwd&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/spec/support/schemas&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;schema_path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;schema_directory&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;schema&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.json&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;no&quot;&gt;JSON&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Validator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;validate!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;schema_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;response&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;body&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;strict&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This matcher will compare our API &lt;code&gt;response&lt;/code&gt; with the &lt;code&gt;schema&lt;/code&gt; specified and determine if they match using a class from the &lt;a href=&quot;https://github.com/ruby-json-schema/json-schema&quot;&gt;json-schema&lt;/a&gt; gem.&lt;/p&gt;
+
+&lt;p&gt;Then in our tests, we can call our custom matcher to ensure request matches the schema.  In addition I usually &amp;quot;spot check&amp;quot; a couple of the values to ensure the data is correct and not just in the right format.&lt;/p&gt;
+
+&lt;p&gt;The schema will be used to validate the types of the rest of the properties and that all require properties are included. Our test will also fail if extra properties that we didn&amp;#39;t define are included in the response.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;c1&quot;&gt;# spec/api/posts.rb&lt;/span&gt;
+
+&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;rails_helper&amp;#39;&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;RSpec&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;describe&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;PostsController&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:request&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;include_context&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;API&amp;#39;&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;describe&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;GET index&amp;#39;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;context&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;get all published posts&amp;#39;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;let!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:author&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+        &lt;span class=&quot;no&quot;&gt;Author&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;create!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;Test Author&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;let!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:draft_post&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+        &lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;create!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+          &lt;span class=&quot;ss&quot;&gt;author&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;author&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+          &lt;span class=&quot;ss&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;Draft&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+          &lt;span class=&quot;ss&quot;&gt;content&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;Great stuff&amp;#39;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;let!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:published_post&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+        &lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;create!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+          &lt;span class=&quot;ss&quot;&gt;author&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;author&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+          &lt;span class=&quot;ss&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;Published&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+          &lt;span class=&quot;ss&quot;&gt;published_at&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;day&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ago&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+          &lt;span class=&quot;ss&quot;&gt;content&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;Better stuff&amp;#39;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;let!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:comment&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+        &lt;span class=&quot;no&quot;&gt;Comment&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;create!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+          &lt;span class=&quot;ss&quot;&gt;author&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;author&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+          &lt;span class=&quot;ss&quot;&gt;post&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;published_post&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+          &lt;span class=&quot;ss&quot;&gt;content&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;Well done&amp;#39;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+      &lt;span class=&quot;n&quot;&gt;before&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;api_get&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;posts&amp;#39;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+      &lt;span class=&quot;n&quot;&gt;specify&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;expect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;json_body&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;posts&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eq&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;expect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;response&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;match_response_schema&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;posts&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;expect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+          &lt;span class=&quot;n&quot;&gt;json_body&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;posts&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;first&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;author&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;name&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eq&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;author&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;If our server&amp;#39;s response didn&amp;#39;t match the expected schema, we&amp;#39;d see a well-formed error like this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;JSON::Schema::ValidationError:
+  The property &amp;#39;#/posts/0&amp;#39; did not contain
+  a required property of &amp;#39;author&amp;#39;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Next Steps&lt;/h3&gt;
+
+&lt;p&gt;This is a decent example of testing a read-only API, but would like to explore how usage might change when testing create/update responses.  Things would also be a bit different if using &lt;a href=&quot;http://jsonapi.org/&quot;&gt;JSON API&lt;/a&gt; format for your API as relationship are side loaded rather than inlined.&lt;/p&gt;
+
+&lt;p&gt;Additionally, I think there is an interesting possibility to create a &amp;quot;documentation viewer&amp;quot; that could parse the schema files and build simple API documentation.  Hope to explore that in a future post.&lt;/p&gt;
+
+&lt;p&gt;A full example app for this post is available &lt;a href=&quot;https://github.com/calebwoods/json-schema-testing&quot;&gt;on my Github account&lt;/a&gt;.&lt;/p&gt;
+</description>
+        <pubDate>Wed, 08 Mar 2017 00:00:00 -0500</pubDate>
+        <link>http://www.calebwoods.com/2017/03/08/testing-apis-json-schema/</link>
+        <guid isPermaLink="true">http://www.calebwoods.com/2017/03/08/testing-apis-json-schema/</guid>
+      </item>
+    
+      <item>
+        <title>Navigate by Word in iTerm2</title>
+        <description>&lt;p&gt;A natural flow that I&amp;#39;ve gotten used to over the years is using the option key (&amp;#8997;) combined with the arrow keys to navigation between word boundaries in simple text editors.  I also use this to quickly delete a word at a time rather than holding down the delete key.&lt;/p&gt;
+
+&lt;p&gt;Given this muscle memory, I was surprised that when I started using &lt;a href=&quot;https://www.iterm2.com/&quot;&gt;iTerm2&lt;/a&gt; that this functionality wasn&amp;#39;t supported out of the box.  Especially since this is standard in the default Terminal app.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/iterm2/navigate_by_word_example.gif&quot; alt=&quot;Navigate by word example&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;Below are the instructions needed to enable this behavior.&lt;/p&gt;
+
+&lt;h3&gt;Settings&lt;/h3&gt;
+
+&lt;p&gt;Open up your default profile and go to the Keys section and ensure that your option keys (&amp;#8997;) are set to act as +Esc.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/iterm2/keys_section.png&quot; alt=&quot;Keys Profile section&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;Then create 2 new key mappings.  One for option (&amp;#8997;) + left arrow (&amp;larr;) to send the escape sequence &lt;code&gt;b&lt;/code&gt; and another for option (&amp;#8997;) + right arrow (&amp;rarr;) to send the escape sequence &lt;code&gt;f&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/iterm2/back_sequence.png&quot; alt=&quot;Back Escape Sequence Example&quot;&gt;
+&lt;img src=&quot;/images/iterm2/forward_sequence.png&quot; alt=&quot;Forward Escape Sequence Example&quot;&gt;&lt;/p&gt;
+
+&lt;h3&gt;Bonus&lt;/h3&gt;
+
+&lt;p&gt;To avoid having to do this again next time you setup a new Mac I highly recommend using the &amp;quot;Load preferences from a custom folder or URL&amp;quot; feature and syncing that with a tool like Dropbox.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/iterm2/sync_settings.png&quot; alt=&quot;Dropbox Sync Settings&quot;&gt;&lt;/p&gt;
+
+&lt;h3&gt;Always Learning&lt;/h3&gt;
+
+&lt;p&gt;Would be curious to hear what ways you&amp;#39;ve customized your terminal experience to add &amp;quot;creature comforts&amp;quot; or increase your productivity.  You can reach me on Twitter at &lt;a href=&quot;https://twitter.com/calebwoods&quot;&gt;@calebwoods&lt;/a&gt;.&lt;/p&gt;
+</description>
+        <pubDate>Thu, 23 Feb 2017 00:00:00 -0500</pubDate>
+        <link>http://www.calebwoods.com/2017/02/23/navigate-by-word-iterm2/</link>
+        <guid isPermaLink="true">http://www.calebwoods.com/2017/02/23/navigate-by-word-iterm2/</guid>
+      </item>
+    
+      <item>
+        <title>Naming Projects</title>
+        <description>&lt;p&gt;Over my career I&amp;#39;ve had the chance to lead dozens of software projects from small internal tools to systems that organizations run their businesses on.  During that time I&amp;#39;ve come to appreciate the power of good names for projects and the affect that can have on the productivity and perceived success of a software project.&lt;/p&gt;
+
+&lt;h3&gt;Benefits&lt;/h3&gt;
+
+&lt;p&gt;Talking about naming and its benefits to computer programming is not a new concept. Metaphors are a widely adopted part of object oriented programming as it allows reasoning about your object through understood mental models.&lt;/p&gt;
+
+&lt;p&gt;So if we know naming is important inside our projects, are there benefits of meaningful project names as well?&lt;/p&gt;
+
+&lt;h4&gt;Reset Expectations&lt;/h4&gt;
+
+&lt;p&gt;If a project is replacing an existing system and you keep the same name but add a modifier like &amp;quot;v2&amp;quot; you cripple your chance to make changes.  Stakeholders expect it to work like the old system (even if it was painful) plus add the new functionality they want.  However, if you start with a new name they will evaluate the way the problem was solved from a clean slate.&lt;/p&gt;
+
+&lt;h4&gt;Reduce Confusion, Add Meaning&lt;/h4&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/old_book.jpg&quot; alt=&quot;Old Book&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;With a lot of business software the names are picked describe the type of system rather than a unique way to identify the system.  Over the past couple of years I&amp;#39;ve worked on an internal reporting tool for our consultancy that reads data from our time tracking service called Almanac. The tool analyzes each employee&amp;#39;s billable hours, a leading indicator of profitability for our company, to ensure they are on track. It could have been called Billable Hours Tracker, but instead I chose the name Almanac as a metaphor for analyzing past data to help us forecast the future just a farmer would use an almanac.&lt;/p&gt;
+
+&lt;h4&gt;Spark Creativity&lt;/h4&gt;
+
+&lt;p&gt;As a Software Craftsman, working on projects is about finding creative ways to solve problems.  That&amp;#39;s not an easy task, so drawing inspiration and excitement from even the small things like the name of a project has power.  From my experience, giving teams the chance to name their project creatively also gives them greater ownership over the success of the project. If the name of a project is a metaphor it may even help you to think about the problems you are solving in a different context.&lt;/p&gt;
+
+&lt;h3&gt;Naming Strategies&lt;/h3&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;There are only two hard things in Computer Science: cache invalidation and naming things. -- Phil Karlton&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Let&amp;#39;s assume that you buy into the idea that having meaningful names for your projects is a good idea. How do you come up with these names?  Here are some strategies I&amp;#39;ve used over the years.&lt;/p&gt;
+
+&lt;h4&gt;Thesaurus&lt;/h4&gt;
+
+&lt;p&gt;Is there a meaningful word or phrase that you can use to describe your project?  Maybe you can think of one, but it seems too common.  Using a &lt;a href=&quot;http://www.thesaurus.com/&quot;&gt;Thesaurus&lt;/a&gt; can be a great way to find rarely used synonyms that could fit your project.&lt;/p&gt;
+
+&lt;h4&gt;Translations&lt;/h4&gt;
+
+&lt;p&gt;Names don&amp;#39;t alway have to make sense in your native language, but they should be memorable.  As an example I once built a simple tool which had the purpose of sending from one service to another one, basically tying the systems together.  For this project I chose the name cravatta which is the Italian word to tie a tie.  While the translation wasn&amp;#39;t perfect, being able to think about project as a single word crystalized the purpose of the project.&lt;/p&gt;
+
+&lt;h3&gt;Themes&lt;/h3&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/hippo_elephant_rhino.png&quot; alt=&quot;Hippo, Elephant, and Rhino&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;With the rise of Service Orient Architecture (SOA) there comes an opportunity for names to follow a theme and fit into an interesting narrative.  On my most recent project, as an example, we began to split out the pieces for the data warehouse application that we were building and needed to come up with a naming scheme for these services.  We ended up with 3 pieces: data extraction, data processing/storage, and customized reporting.  Being that several big data tools already have animal mascots we decided on: Hippo (think hungry hippos), Elephant (never forgets), and Rhino (sounds cool) for our project names.  These unique names have given us a framework for discussing data interaction that we wouldn&amp;#39;t have had with more generic names.&lt;/p&gt;
+
+&lt;h3&gt;Conclusion&lt;/h3&gt;
+
+&lt;p&gt;In my opinion naming is a skill and form of creativity that can be a huge benefit to software teams and should be exercised often.  At times these creative names may only end up being internal code names, but I&amp;#39;ve never regretted dropping a generic name for something unique. What techniques have you used when naming a project?  Tweet at me &lt;a href=&quot;https://twitter.com/calebwoods&quot;&gt;@calebwoods&lt;/a&gt;, I&amp;#39;ve love to hear your experiences.&lt;/p&gt;
+</description>
+        <pubDate>Sat, 23 Jan 2016 00:00:00 -0500</pubDate>
+        <link>http://www.calebwoods.com/2016/01/23/naming-software-projects/</link>
+        <guid isPermaLink="true">http://www.calebwoods.com/2016/01/23/naming-software-projects/</guid>
+      </item>
+    
+      <item>
+        <title>Testing React Components in Rails</title>
+        <description>&lt;p&gt;As mentioned in a &lt;a href=&quot;/2015/10/19/choosing-frontend-form-data-heavy-applications/&quot;&gt;previous post&lt;/a&gt;, part of my current learning and experimentation is finding ways to mix a &amp;quot;traditional&amp;quot; Rails application with Javascript components.&lt;/p&gt;
+
+&lt;p&gt;Recently, I&amp;#39;ve been further exploring &lt;a href=&quot;https://facebook.github.io/react/&quot;&gt;React&lt;/a&gt;, which I really like, but I couldn&amp;#39;t find a simple way to unit test components in a Rails app using the &lt;a href=&quot;http://guides.rubyonrails.org/asset_pipeline.html&quot;&gt;Asset Pipeline&lt;/a&gt;. The benefit I&amp;#39;m looking for is being able to do a bulk of the frontend with server side rendered views as they are easy to build quickly and add React components for parts of the interface that need it.&lt;/p&gt;
+
+&lt;p&gt;Most React testing examples assume a &lt;a href=&quot;http://requirejs.org/docs/commonjs.html&quot;&gt;CommonJS&lt;/a&gt; way of structuring and requiring Javascript files.  Strangely,  or maybe to increase adoption, the  &lt;a href=&quot;https://github.com/reactjs/react-rails&quot;&gt;react-rails&lt;/a&gt; gem integrates with the Asset Pipeline and I wanted to find a testing solution to match.&lt;/p&gt;
+
+&lt;h3&gt;Component&lt;/h3&gt;
+
+&lt;p&gt;As an example I&amp;#39;ll implement the CheckboxWithLabel component used in the &lt;a href=&quot;http://facebook.github.io/jest/&quot;&gt;Jest&lt;/a&gt; &lt;a href=&quot;https://facebook.github.io/jest/docs/tutorial-react.html&quot;&gt;React tutorial&lt;/a&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;c1&quot;&gt;// app/assets/javascripts/components/checkbox_with_label.js.jsx&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;CheckboxWithLabel&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;React&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;createClass&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;({&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;getInitialState&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;isChecked&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;onChange&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;setState&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;({&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;isChecked&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;state&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;isChecked&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;render&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;label&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;state&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;isChecked&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;props&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;labelOn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;props&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;labelOff&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;label&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;input&lt;/span&gt;
+          &lt;span class=&quot;nx&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;checkbox&amp;quot;&lt;/span&gt;
+          &lt;span class=&quot;nx&quot;&gt;checked&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;state&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;isChecked&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+          &lt;span class=&quot;nx&quot;&gt;onChange&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;onChange&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;/&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;label&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;/label&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Test Setup&lt;/h3&gt;
+
+&lt;p&gt;Rather than using &lt;a href=&quot;http://facebook.github.io/jest/&quot;&gt;Jest&lt;/a&gt; for our tests I&amp;#39;ll use &lt;a href=&quot;http://jasmine.github.io/&quot;&gt;Jasmine&lt;/a&gt;, which Jest is built on but is easier to integrate with Rails using the &lt;a href=&quot;https://github.com/searls/jasmine-rails&quot;&gt;jasmine-rails&lt;/a&gt; gem.&lt;/p&gt;
+
+&lt;p&gt;After adding &lt;code&gt;jasmine-rails&lt;/code&gt; to the Gemfile and running the installer, &lt;code&gt;rails generate jasmine_rails:install&lt;/code&gt;, we just need to make a couple changes.&lt;/p&gt;
+
+&lt;p&gt;First we need to configure &lt;code&gt;react-rails&lt;/code&gt; to include the &lt;code&gt;TestUtils&lt;/code&gt; addon in &lt;code&gt;config/application.rb&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;c1&quot;&gt;# config/appliction.rb&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;module&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;ReactTesting&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Application&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Rails&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Application&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;react&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;addons&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To enable using the JSX preprocessor in our test we simply need to modify the &lt;code&gt;spec_files&lt;/code&gt; matcher in &lt;code&gt;spec/javascripts/support/jasmine.yml&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;spec_files&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;**/*[Ss]pec.{js.jsx,js,jsx}&amp;quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;If you want to support coffee script in your tests as well, you can use something like:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;spec_files&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;**/*[Ss]pec.{js.jsx.coffee,js.jsx,js.coffee,js,jsx,coffee}&amp;quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Also, to force the use of &lt;a href=&quot;http://phantomjs.org/&quot;&gt;PhantomJS&lt;/a&gt; 2.x which is already installed on my laptop we need to add:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;use_phantom_gem&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;false&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You&amp;#39;ll also want to make sure your CI server is using PhantomJS 2.x.  For &lt;a href=&quot;https://travis-ci.com/&quot;&gt;Travis CI&lt;/a&gt; just add  the following to your &lt;code&gt;.travis.yml&lt;/code&gt; file.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;before_install&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;wget https://s3.amazonaws.com/travis-phantomjs/phantomjs-2.0.0-ubuntu-12.04.tar.bz2&lt;/span&gt;
+  &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;tar -xjf phantomjs-2.0.0-ubuntu-12.04.tar.bz2&lt;/span&gt;
+  &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;export PATH=$PWD:$PATH&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now on to writing our test.&lt;/p&gt;
+
+&lt;h3&gt;Test&lt;/h3&gt;
+
+&lt;p&gt;Our test will have two assertions. First to check the initial test is correct and a second after simulating a change.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;c1&quot;&gt;// spec/javascripts/components/checkbox_with_label_spec.js.jsx&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;TestUtils&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;React&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;addons&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;TestUtils&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;describe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;CheckboxWithLabel&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+
+  &lt;span class=&quot;nx&quot;&gt;it&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;changes the text after click&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// Render a checkbox with label in the document&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;checkbox&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;TestUtils&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;renderIntoDocument&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;CheckboxWithLabel&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;labelOn&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;On&amp;quot;&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;labelOff&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;Off&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;checkboxNode&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;ReactDOM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;findDOMNode&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;checkbox&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// Verify that it&amp;#39;s Off by default&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;expect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;checkboxNode&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;textContent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;toEqual&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;Off&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// Simulate a click and verify that it is now On&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;TestUtils&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Simulate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;change&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;TestUtils&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;findRenderedDOMComponentWithTag&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;checkbox&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s1&quot;&gt;&amp;#39;input&amp;#39;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;expect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;checkboxNode&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;textContent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;toEqual&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;On&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+
+&lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This matches the sample test is from the &lt;a href=&quot;https://facebook.github.io/jest/docs/tutorial-react.html&quot;&gt;Jest tutorial&lt;/a&gt;.  Although it should probably be noted we will not have access to Jest&amp;#39;s &lt;a href=&quot;https://facebook.github.io/jest/docs/mock-functions.html#content&quot;&gt;Automatic Mocking&lt;/a&gt; feature as we are using Jasmine instead.&lt;/p&gt;
+
+&lt;p&gt;If we want to avoid declaring the &lt;code&gt;TestUtils&lt;/code&gt; variable in each file we can extract it as a helper.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;c1&quot;&gt;// spec/javascripts/helpers/react_helper.js&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;window&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;TestUtils&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;React&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;addons&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;TestUtils&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Running Tests&lt;/h3&gt;
+
+&lt;p&gt;Now to run tests we have two options: Rake task and browser.&lt;/p&gt;
+
+&lt;h4&gt;Rake task&lt;/h4&gt;
+
+&lt;p&gt;The &lt;code&gt;jasmine-rails&lt;/code&gt; gem includes a Rake task &lt;code&gt;spec:javascripts&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;$ bundle exec rake spec:javascripts
+Starting...
+
+Finished
+-----------------
+1 spec, 0 failures in 0.023s.
+
+ConsoleReporter finished
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You can also configure this task to run as part of the default rake task.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;c1&quot;&gt;# Rakefile&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:default&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;spec:javascripts&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;Browser&lt;/h4&gt;
+
+&lt;p&gt;Another benefit with the &lt;code&gt;jasmine-rails&lt;/code&gt; gem is that it configures and mounts the Jasmine runner at &lt;code&gt;/specs&lt;/code&gt; in your Rails app.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/jasmine_in_browser.png&quot; alt=&quot;Jasmine Runner in Browser&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;This means using can easily stick a &lt;code&gt;debugger&lt;/code&gt; statement in your test and use the Chrome web inspector to step through your tests.&lt;/p&gt;
+
+&lt;h3&gt;Conclusion&lt;/h3&gt;
+
+&lt;p&gt;Let&amp;#39;s evaluate what we have.&lt;/p&gt;
+
+&lt;p&gt;Pros:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Simple setup with existing tools
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://reactjsnews.com/setting-up-rails-for-react-and-jest/&quot;&gt;Don&amp;#39;t have to install npm packages&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Still using the Assets Pipeline&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;Easy to run tests via Rake task (for CI) and browser (for debugging)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Cons:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Not using Jest
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://facebook.github.io/jest/docs/automatic-mocking.html#content&quot;&gt;Automatic Mocking&lt;/a&gt; would seem to be the biggest loss&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;This solution does assume you want to keep using the Asset Pipeline, but I&amp;#39;m guessing for most Rails apps that&amp;#39;s the easiest way to get started with React and it follows the style of the &lt;code&gt;react-rails&lt;/code&gt; gem.&lt;/p&gt;
+
+&lt;p&gt;If you&amp;#39;d like to see the full running code, I&amp;#39;ve created a minimal sample application at &lt;a href=&quot;https://github.com/calebwoods/react_testing&quot;&gt;https://github.com/calebwoods/react_testing&lt;/a&gt;.&lt;/p&gt;
+</description>
+        <pubDate>Sun, 01 Nov 2015 00:00:00 -0400</pubDate>
+        <link>http://www.calebwoods.com/2015/11/01/testing-react-components-rails/</link>
+        <guid isPermaLink="true">http://www.calebwoods.com/2015/11/01/testing-react-components-rails/</guid>
+      </item>
+    
+      <item>
+        <title>Choosing a Frontend for Form and Data Heavy Applications</title>
+        <description>&lt;p&gt;Recently, I&amp;#39;ve been building several form and data heavy business applications for clients.  Most of these applications have lots of basic CRUD features on top of some special business rules or interactions with other systems.&lt;/p&gt;
+
+&lt;p&gt;In experimenting with different stacks, including some full Javascript frontends with Angular, I&amp;#39;ve come up with the following set of considerations for when a full Javascript frontend may not be the right fit.&lt;/p&gt;
+
+&lt;h3&gt;Shaping Data&lt;/h3&gt;
+
+&lt;p&gt;One benefit of doing a full Javascript SPA (Single Page Application) as a frontend is that it requires you to build a robust API for your application.  I&amp;#39;ve found that this is a good constraint for defining the interface of your application and serves as a great point in the stack for integration testing.&lt;/p&gt;
+
+&lt;p&gt;When building your API you&amp;#39;ll want to have a method of serializing the data for the API.  This becomes a challenge when the same objects need to be represented differently depending on context.  In some case you may need to display all attributes of an object and in others, such as a form dropdown, just the id and name.&lt;/p&gt;
+
+&lt;p&gt;This presents the problem of how to structure your API so that you are sending the smallest amount of data possible for optimal performance. Do you have different endpoints? Optional parameters in your endpoints?&lt;/p&gt;
+
+&lt;p&gt;Netflix ran into this problem when trying support varying clients with the same REST API.  Instead of adding more complexity to the API they created a &lt;a href=&quot;http://techblog.netflix.com/2013/01/optimizing-netflix-api.html&quot;&gt;system for client teams to build their own custom endpoints&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Another option is the use of projections, such as on the &lt;a href=&quot;http://python-eve.org/config.html#projection&quot;&gt;Eve Python project&lt;/a&gt;.  It allows the client of the API to define what attributes are returned in a response via a whitelist or blacklist.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;# Only return lastname
+$ curl -i http://eve-demo.herokuapp.com/people?projection={&amp;quot;lastname&amp;quot;: 1}
+
+# Return everything but lastname
+$ curl -i http://eve-demo.herokuapp.com/people?projection={&amp;quot;lastname&amp;quot;: 0}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The Netflix approach may not be the easiest solution to implement for smaller applications, but considering how data will be dynamically serialized is something that will need to be tackled.  Putting all the control on client using something like projections may be useful, but it also encodes a lot of knowledge into the client.&lt;/p&gt;
+
+&lt;h3&gt;Multiple Environment Complexity&lt;/h3&gt;
+
+&lt;p&gt;Having different server and client environments creates some duplication of rules and the domain that will need to exist.  You&amp;#39;ll also need to keep more interactions loaded in your mental model when working on a feature.&lt;/p&gt;
+
+&lt;p&gt;For example, consider that to add an &amp;quot;update&amp;quot; feature for an object in a standard Rails you would need to edit 3-4 files (Model, View, Controller, Routes), with a rich Javascript frontend you will now need to change 7-8 files (Server: Model, Serializer, Controller, Routes, Client: Model, View, Controller, Routes).&lt;/p&gt;
+
+&lt;h3&gt;Forms&lt;/h3&gt;
+
+&lt;p&gt;One thing that I&amp;#39;ve missed with Javascript frontends is the Rails form builder.  Because it integrates with a backing form object it can integrate validations, automatically determine input types, and abstract away markup with a library like &lt;a href=&quot;https://github.com/plataformatec/simple_form&quot;&gt;simple_form&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Having to go through the serialization step means you will need additional logic to integrate errors. Large forms with nested data structures is where this pain is felt the most.&lt;/p&gt;
+
+&lt;p&gt;Either way you go, you&amp;#39;ll need to consider client side validations and how to handle dynamic form controls, which for some cases can be easier with a rich client.&lt;/p&gt;
+
+&lt;h3&gt;Browser Support&lt;/h3&gt;
+
+&lt;p&gt;While it won&amp;#39;t affect all applications, older browser support is something to consider.  Most of the world has moved on from older versions of Internet Explorer, but many large enterprises are still running Windows XP and thus locked into IE8.&lt;/p&gt;
+
+&lt;p&gt;Angular&amp;#39;s support of these browsers has not been great with IE8 support dropped in 1.3 and Angular 2 is &lt;a href=&quot;http://angularjs.blogspot.com/2014/03/angular-20.html&quot;&gt;only supporting &amp;quot;evergreen&amp;quot; browsers&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Other Javascript frameworks like Ember and React have a similar story.  If you need your application to at least work in a limited mode on those browsers you might need to consider how fallback will work (or not work) with a full Javascript frontend.&lt;/p&gt;
+
+&lt;h3&gt;Managing Trade Offs&lt;/h3&gt;
+
+&lt;p&gt;The challenges mentioned above are trade offs that should be considered when deciding on the stack for a modern web application in 2015.  Building a full Javascript frontend is not the only option.&lt;/p&gt;
+
+&lt;p&gt;I&amp;#39;m starting to explore more options for mixing in Javascript with a progressive enhancement mindset rather than all or nothing.  Partly to increase browser support, but also to make building these types of business applications as productive as possible by leveraging the best tools for the situation.&lt;/p&gt;
+
+&lt;p&gt;On future projects I plan to experiment with leveraging the latest version of &lt;a href=&quot;https://github.com/rails/turbolinks&quot;&gt;Turbolinks&lt;/a&gt; which uses the browser&amp;#39;s PushState API to reload the DOM without recompiling CSS and JS, but can fallback to full page loads when needed. I also plan to explore  ways to build smaller SPAs or Javascript components within a server side application, rather taking the all or nothing approach.&lt;/p&gt;
+
+&lt;p&gt;Javascript only frontends have their place, but from my recent experience the sweet spot is not &lt;strong&gt;yet&lt;/strong&gt; these form and data heavy business applications.&lt;/p&gt;
+</description>
+        <pubDate>Mon, 19 Oct 2015 00:00:00 -0400</pubDate>
+        <link>http://www.calebwoods.com/2015/10/19/choosing-frontend-form-data-heavy-applications/</link>
+        <guid isPermaLink="true">http://www.calebwoods.com/2015/10/19/choosing-frontend-form-data-heavy-applications/</guid>
+      </item>
+    
+      <item>
+        <title>Minimal Blogging Infrastructure with Jekyll, Github, and Wercker</title>
+        <description>&lt;p&gt;Over the past couple of years I&amp;#39;ve made a concerted effort to write a blog post at least once a month.  My motivation for this goal has been to improve my writing overall and use my blog as a playground to document my latest experiments or crazy bug fixes.&lt;/p&gt;
+
+&lt;p&gt;Forcing myself into this habit has been great for learning.  In order to write up a post of something that I&amp;#39;ve learned it really takes digging into it just a bit deeper to organize my thoughts, and I&amp;#39;ve found that this helps make the lessons stick.  I&amp;#39;ve also found myself referencing my own posts months later to recall something I&amp;#39;ve learned.&lt;/p&gt;
+
+&lt;h3&gt;Getting Started&lt;/h3&gt;
+
+&lt;p&gt;Before I started writing on my own blog I&amp;#39;d done some occasional writing elsewhere and found that not having a simple way to quick post an idea resulted not posting at all.&lt;/p&gt;
+
+&lt;p&gt;To get to point where publishing was easy I wanted to have a process for writing posts that was minimal enough to help me focus on writing.  Also wanted to be able to write in &lt;a href=&quot;https://help.github.com/articles/github-flavored-markdown/&quot;&gt;Github flavored Markdown&lt;/a&gt; like I do throughout the day when I&amp;#39;m working on projects.&lt;/p&gt;
+
+&lt;p&gt;Ruby being my go to language these days and wanting to give &lt;a href=&quot;https://help.github.com/articles/using-jekyll-with-pages/&quot;&gt;Github pages&lt;/a&gt; a try for hosting, I settled on using &lt;a href=&quot;http://jekyllrb.com/&quot;&gt;Jekyll&lt;/a&gt; for my blog.&lt;/p&gt;
+
+&lt;h3&gt;Plugins&lt;/h3&gt;
+
+&lt;p&gt;One limiting factor of Github pages and its auto building feature for Jekyll sites is that you can&amp;#39;t use plugins.&lt;/p&gt;
+
+&lt;p&gt;To get around this problem I created a &lt;a href=&quot;https://github.com/calebwoods/calebwoods.github.io/blob/source/Rakefile&quot;&gt;rake task&lt;/a&gt; that would build my site locally in a git repo and force push to Github pages. &lt;/p&gt;
+
+&lt;p&gt;This means once I finish a post all I need to do is run &lt;code&gt;rake publish&lt;/code&gt; and it will deploy the static files to Github.&lt;/p&gt;
+
+&lt;h3&gt;Writing from Anywhere&lt;/h3&gt;
+
+&lt;p&gt;This setup works pretty well, but it did create a bit of a problem where the only way I could publish a new blog post was on my main development machine where I had a full Ruby setup.  Definitely not very minimal.  Instead I wanted to be able to complete my full writing workflow from my &lt;a href=&quot;https://www.google.com/chromebook/&quot;&gt;Chromebook&lt;/a&gt; to avoid the distractions of my main work computer.&lt;/p&gt;
+
+&lt;p&gt;After looking at ways of setting of Git and Ruby on the Chromebook I finally settled on the requirement to be able to use a web browser.  Because my site is a repo on Github the file creation and web editing aspect is solved.  Github&amp;#39;s markdown editor in full screen is actually a  very nice distraction free way to write a blog post.&lt;/p&gt;
+
+&lt;p&gt;This meant I just needed a way to deploy from a browser to complete my setup.&lt;/p&gt;
+
+&lt;h3&gt;Deployment Pipeline&lt;/h3&gt;
+
+&lt;p&gt;I&amp;#39;ve used a number of Continue Integration services, but for my last few personal projects I&amp;#39;ve been using &lt;a href=&quot;http://wercker.com/&quot;&gt;Wercker&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;My setup is pretty simple and all the build steps are defined as a &lt;a href=&quot;https://github.com/calebwoods/calebwoods.github.io/blob/source/wercker.yml&quot;&gt;wercker.yml&lt;/a&gt; file.  On each push to my Github repo a wercker build is kicked off which installs the needed gems and builds the Jekyll site.&lt;/p&gt;
+
+&lt;p&gt;If that succeeds then I can kick off the deployment which again builds the environment and runs the same rake tasks that I could run in my local Ruby environment.  Wercker also make it easy to set ENV variables and SSH keys which I use to be able to connect to &lt;a href=&quot;https://www.algolia.com/&quot;&gt;Algolia&lt;/a&gt; and store an SSH key for Github.&lt;/p&gt;
+
+&lt;p&gt;Overall I&amp;#39;ve been pleased with this setup and have become a big fan of using static sites, especially when paired with a Javascript frontend.  It&amp;#39;s just enough flexibility to allow me to experiment and make the site my own and while adding the right kind of constraints to push me back to actually writing blog posts.&lt;/p&gt;
+</description>
+        <pubDate>Sun, 23 Aug 2015 00:00:00 -0400</pubDate>
+        <link>http://www.calebwoods.com/2015/08/23/minimal-blogging-infrastructure/</link>
+        <guid isPermaLink="true">http://www.calebwoods.com/2015/08/23/minimal-blogging-infrastructure/</guid>
+      </item>
+    
+      <item>
+        <title>Advanced Arel Cheat Sheet</title>
+        <description>&lt;p&gt;After seeing &lt;a href=&quot;https://twitter.com/camertron&quot;&gt;@camertron&lt;/a&gt;&amp;#39;s talk on Advance Arel from Rails Conf 2014 (&lt;a href=&quot;http://www.slideshare.net/camerondutro/advanced-arel-when-activerecord-just-isnt-enough&quot;&gt;slides&lt;/a&gt;) I&amp;#39;ve wanted a simple reference for the most common Arel comparators that I forget to use instead of string interpolation.&lt;/p&gt;
+
+&lt;p&gt;This post was motivated by a recent bug I found in one of my applications where using string interpolation with joined relations caused an ambiguous column SQL error. While this post is intended to serve as a personal reference, it may be useful to others as well.&lt;/p&gt;
+
+&lt;p&gt;Also check out &lt;a href=&quot;http://www.scuttle.io/&quot;&gt;scuttle.io&lt;/a&gt; as a further resource to translate SQL to Arel.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt; Arel is considered an internal API for ActiveRecord and can change between major Rails versions. &lt;/p&gt;
+
+&lt;h3&gt;Setup&lt;/h3&gt;
+
+&lt;p&gt;My examples assume a Rails 4.2 application and a single &lt;code&gt;Post&lt;/code&gt; model with 2 attributes &lt;code&gt;title&lt;/code&gt; and &lt;code&gt;published_date&lt;/code&gt;, &lt;a href=&quot;https://gist.github.com/calebwoods/af61c6af057067f55a27&quot;&gt;gist&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Note that pulling in the &lt;a href=&quot;https://github.com/camertron/arel-helpers&quot;&gt;arel-helpers&lt;/a&gt; gem can eliminate the need to keep calling &lt;code&gt;arel_table&lt;/code&gt; all over the place and adds some potentially useful join helpers.&lt;/p&gt;
+
+&lt;h3&gt;Equality&lt;/h3&gt;
+
+&lt;p&gt;Greater than&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arel_table&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:published_date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2015&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# instead of&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;published_date &amp;gt; ?&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2015&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Less than&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arel_table&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:published_date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2015&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# instead of&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;published_date &amp;lt; ?&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2015&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Greater than or equal&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arel_table&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:published_date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gteq&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2015&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# instead of&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;published_date &amp;gt;= ?&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2015&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Less than or equal&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arel_table&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:published_date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lteq&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2015&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# instead of&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;published_date &amp;lt;= ?&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2015&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Not equal&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arel_table&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:title&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;not_eq&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;Sample Post&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# instead of&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;title != ?&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;Sample Post&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Matching / (I)LIKE&lt;/h3&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arel_table&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:title&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;matches&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;%sample%&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# instead of&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;where&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;title ILIKE ?&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;%sample%&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Ordering&lt;/h3&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;order&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arel_table&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:publish_date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;desc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# instead of&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;order&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;publish_date DESC&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;If you are looking for even more flexibility and control than what ActiveRecord provides, I would highly recommend the &lt;a href=&quot;https://github.com/jeremyevans/sequel&quot;&gt;sequel&lt;/a&gt; gem.&lt;/p&gt;
+
+&lt;p&gt;Have other tricks you use with ActiveRecord? Tweet at me &lt;a href=&quot;https://twitter.com/calebwoods&quot;&gt;@calebwoods&lt;/a&gt;.&lt;/p&gt;
+</description>
+        <pubDate>Tue, 11 Aug 2015 00:00:00 -0400</pubDate>
+        <link>http://www.calebwoods.com/2015/08/11/advanced-arel-cheat-sheet/</link>
+        <guid isPermaLink="true">http://www.calebwoods.com/2015/08/11/advanced-arel-cheat-sheet/</guid>
+      </item>
+    
+      <item>
+        <title>SSH to Ansible host by hostname</title>
+        <description>&lt;p&gt;For my current project we have &lt;a href=&quot;http://docs.ansible.com/&quot;&gt;Ansible&lt;/a&gt; deploy scripts for our handful of services to a set of development servers.  This has generally worked well, but occasionally we need to SSH directly to the server to debug an issue.  Ideally I&amp;#39;d like to SSH to a server via it&amp;#39;s Ansible hostname rather than having to look up its IP or machine name.&lt;/p&gt;
+
+&lt;p&gt;To my knowledge this doesn&amp;#39;t exist out of the box with Ansible, so I set about writing a simple Bash function to serve this purpose.&lt;/p&gt;
+
+&lt;p&gt;Note that I&amp;#39;m working with a few assumptions:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;The SSH user for each host is that same, &lt;code&gt;ansible&lt;/code&gt; in my example.&lt;/li&gt;
+&lt;li&gt;The hosts are defined in the &lt;a href=&quot;http://docs.ansible.com/ansible/intro_inventory.html&quot;&gt;default location&lt;/a&gt; &lt;code&gt;/etc/ansible/hosts&lt;/code&gt; or a file ending in &lt;code&gt;hosts&lt;/code&gt; under the current working directory, e.g. &lt;code&gt;provisioning/ansible_hosts&lt;/code&gt; or &lt;code&gt;provisioning/hosts&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Assumes SSH connection on port 22.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3&gt;Script&lt;/h3&gt;
+
+&lt;p&gt;In &lt;code&gt;~/.bashrc&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;ansible-ssh&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; -z &lt;span class=&quot;s2&quot;&gt;&amp;quot;$1&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;No hostname specified&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;usage: ansible-ssh [hostname] [user=ansible]&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; 1&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;fi&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; -z &lt;span class=&quot;s2&quot;&gt;&amp;quot;$2&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt;
+    &lt;span class=&quot;nv&quot;&gt;USER&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;ansible&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;
+    &lt;span class=&quot;nv&quot;&gt;USER&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;$2&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;fi&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; -e &lt;span class=&quot;s1&quot;&gt;&amp;#39;/etc/ansible/hosts&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt;
+    &lt;span class=&quot;nv&quot;&gt;DIRECTORIES&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;/etc/ansible .&amp;#39;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;
+    &lt;span class=&quot;nv&quot;&gt;DIRECTORIES&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;.&amp;#39;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;fi&lt;/span&gt;
+
+  &lt;span class=&quot;nv&quot;&gt;INVENTORY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;find &lt;span class=&quot;nv&quot;&gt;$DIRECTORIES&lt;/span&gt; -name &lt;span class=&quot;s1&quot;&gt;&amp;#39;*hosts&amp;#39;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; xargs&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;
+  &lt;span class=&quot;nv&quot;&gt;HOST&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;cat &lt;span class=&quot;nv&quot;&gt;$INVENTORY&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep -A &lt;span class=&quot;m&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;\[$1\]&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; tail -1&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;command &lt;/span&gt;ssh &lt;span class=&quot;s2&quot;&gt;&amp;quot;$USER@$HOST&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Adding this to my bash config I can create an SSH session with the following:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;$ ansible-ssh testhost
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To SSH with a specific user, just pass the user as the second argument:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;$ ansible-ssh testhost devuser
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;I&amp;#39;m sure there may be more efficient ways to parse the hosts file and I&amp;#39;m open to suggestion for improvement, but this has already been a time saver.&lt;/p&gt;
+
+&lt;p&gt;For a future version I&amp;#39;d like to extract to proper binary, instead of a bash function, and add some more features including:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Support for non standard SSH port&lt;/li&gt;
+&lt;li&gt;Support for dynamic inventories&lt;/li&gt;
+&lt;li&gt;Configurable default user&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Have other ways you&amp;#39;ve leveraged ansible artifacts to make dev tasks easier? Tweet at me &lt;a href=&quot;https://twitter.com/calebwoods&quot;&gt;@calebwoods&lt;/a&gt;.&lt;/p&gt;
+</description>
+        <pubDate>Sun, 02 Aug 2015 00:00:00 -0400</pubDate>
+        <link>http://www.calebwoods.com/2015/08/02/ssh-ansible-host/</link>
+        <guid isPermaLink="true">http://www.calebwoods.com/2015/08/02/ssh-ansible-host/</guid>
+      </item>
+    
+  </channel>
+</rss>

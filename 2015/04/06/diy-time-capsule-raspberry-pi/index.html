@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>DIY Time Capsule with a Raspberry Pi</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="linux,bash,server,DIY" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  DIY Time Capsule with a Raspberry Pi
+</h2>
+
+<p class="meta">
+  06 Apr 2015
+  
+    <a class="article-tag" href="/tags/linux">linux</a>
+  
+    <a class="article-tag" href="/tags/bash">bash</a>
+  
+    <a class="article-tag" href="/tags/server">server</a>
+  
+    <a class="article-tag" href="/tags/DIY">DIY</a>
+  
+</p>
+
+<div class="post">
+  <p>As a Mac user I&#39;ve always used Time Machine for local backups.  The only issue is that it requires plugging a drive directly into your machine or buying an Apple <a href="http://store.apple.com/us/product/ME182LL/A/airport-time-capsule-3tb?fnode=4d">Time Capsule</a>. At $200 - $400 that&#39;s not a cheap option for NAS backups.</p>
+
+<p>So I set out to create my own DIY Time Capsule using a <a href="http://www.amazon.com/BUFFALO-DriveStation-Desktop-Drive-HD-LC3-0U3/dp/B00GE97LKI/">3TB Hard Drive</a> and a <a href="http://www.raspberrypi.org/">Raspberry Pi</a>.  Below are the steps I went through to get things setup.</p>
+
+<p><strong>Note:</strong> I always recommend having multiple backup sources and because this setup requires mimicking Apple protocol there is potential for data loss.  Use at your own risk.</p>
+
+<h3>Mounting USB Drive</h3>
+
+<p>To make the backup drive work directly plugged into the Raspberry Pi and my Mac, I formatted the drive as HFS+ Journaled.  Out of the box, <a href="http://www.raspbian.org/">Raspbian</a> (default Raspberry Pi OS) doesn&#39;t support HFS+ so we will need to add support.</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>sudo apt-get update
+<span class="nv">$ </span>sudo apt-get install hfsprogs hfsplus
+</code></pre></div>
+<p>With that done we need to list the partitions of the drive we have plugged into the Raspberry Pi.  This will give us the information we need to mount the drive.  We&#39;ll use GNU Parted.</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c"># start GNU Parted shell</span>
+<span class="nv">$ </span>sudo /sbin/parted
+
+<span class="c"># once shell is loaded use `print` to show partition info</span>
+print
+
+<span class="c"># output</span>
+
+Model: BUFFALO External HDD <span class="o">(</span>scsi<span class="o">)</span>
+Disk /dev/sda: 3001GB
+Sector size <span class="o">(</span>logical/physical<span class="o">)</span>: 512B/4096B
+Partition Table: gpt
+
+Number  Start   End     Size    File system  Name                  Flags
+ <span class="m">1</span>      20.5kB  210MB   210MB   fat32        EFI System Partition  boot
+ <span class="m">2</span>      210MB   3000GB  3000GB  hfs+         Time Machine 3TB
+</code></pre></div>
+<p>From that information we can see that the disk is <code>/dev/sda</code> and we want to mount partition 2.  We can now create our fstab entry.</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c"># directory to mount drive</span>
+<span class="nv">$ </span>sudo mkdir -p /media/tm_3tb
+
+<span class="c"># open fstab file; could use nano instead of vim</span>
+<span class="nv">$ </span>sudo vim /etc/fstab
+
+<span class="c"># line to add to fstab file</span>
+/dev/sda2       /media/tm_3tb   hfsplus force,rw,user,auto        <span class="m">0</span>       0
+</code></pre></div>
+<p>With the entry in the fstab file the drive will auto boot when we restart, but we need to manually mount now.</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>sudo mount -a
+</code></pre></div>
+<h3>Setup AFP</h3>
+
+<p>Now that we have our drive connected to the Raspberry Pi, we need a way to for Time Machine to see the drive.  Apple uses the <a href="http://en.wikipedia.org/wiki/Apple_Filing_Protocol">AFP</a> standard for network file sharing.  </p>
+
+<p>Unfortunately AFP is an Apple only &quot;standard&quot; so we will need to install the <a href="http://netatalk.sourceforge.net/">Netatalk</a> package.  Also, because we want to use a 3.x version of Netatalk we will need to install from the source.</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>sudo apt-get install git
+
+<span class="c"># pull down source code</span>
+<span class="nv">$ </span>mkdir ~/code
+<span class="nv">$ </span><span class="nb">cd</span> ~/code
+
+<span class="c"># clone netatalk repo</span>
+<span class="nv">$ </span>git clone git://git.code.sf.net/p/netatalk/code netatalk
+
+<span class="c"># checkout version 3-1-7</span>
+<span class="nv">$ </span><span class="nb">cd </span>netatalk
+<span class="nv">$ </span>git checkout netatalk-3-1-7
+</code></pre></div>
+<p>With the Netatalk source checked out we&#39;ll now install the dependencies we need.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">$ sudo apt-get install build-essential \
+libevent-dev \
+libssl-dev \
+libgcrypt11-dev \
+libkrb5-dev \
+libpam0g-dev \
+libwrap0-dev \
+libdb-dev \
+libtdb-dev \
+libmysqlclient-dev \
+libavahi-client-dev \
+libacl1-dev \
+libldap2-dev \
+libcrack2-dev \
+systemtap-sdt-dev \
+libdbus-1-dev \
+libdbus-glib-1-dev \
+libglib2.0-dev \
+tracker \
+libtracker-sparql-0.14-dev \
+libtracker-miner-0.14-dev \
+bison \
+avahi-daemon
+</code></pre></div>
+<p>With those dependencies installed, we just need to make and install Netatalk.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">$ ./bootstrap
+$ ./configure \
+--with-init-style=debian-sysv \
+--without-libevent \
+--without-tdb \
+--with-cracklib \
+--enable-krbV-uam \
+--with-pam-confdir=/etc/pam.d \
+--with-dbus-sysconf-dir=/etc/dbus-1/system.d \
+--with-tracker-pkgconfig-version=0.14
+$ make
+$ sudo make install
+</code></pre></div>
+<p>To verify that netatalk installed correctly run this command:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">$ afpd -V
+</code></pre></div>
+<h3>Edit Configuration Files</h3>
+
+<p>Now that we have everything installed we&#39;ll setup the configuration files.</p>
+
+<p>In <code>/etc/nsswitch.conf</code> we need to change the line that reads:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">hosts:    files mdns4_minimal [NOTFOUND=return] dns mdns4
+</code></pre></div>
+<p>to</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">hosts:    files mdns4_minimal [NOTFOUND=return] dns mdns4 mdns
+</code></pre></div>
+<p>Next we need to create a file at <code>/etc/avahi/services/afpd.service</code> with the following content:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">&lt;?xml version=&quot;1.0&quot; standalone=&#39;no&#39;?&gt;&lt;!--*-nxml-*--&gt;
+&lt;!DOCTYPE service-group SYSTEM &quot;avahi-service.dtd&quot;&gt;
+&lt;service-group&gt;
+    &lt;name replace-wildcards=&quot;yes&quot;&gt;%h&lt;/name&gt;
+    &lt;service&gt;
+        &lt;type&gt;_afpovertcp._tcp&lt;/type&gt;
+        &lt;port&gt;548&lt;/port&gt;
+    &lt;/service&gt;
+    &lt;service&gt;
+        &lt;type&gt;_device-info._tcp&lt;/type&gt;
+        &lt;port&gt;0&lt;/port&gt;
+        &lt;txt-record&gt;model=TimeCapsule&lt;/txt-record&gt;
+    &lt;/service&gt;
+&lt;/service-group&gt;
+</code></pre></div>
+<p>Lastly we need to setup the <code>/usr/local/etc/afp.conf</code> with the follow content.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">[Global]
+  mimic model = TimeCapsule6,106
+
+[Time Machine 3TB]
+  path = /media/tm_3tb
+  time machine = yes
+</code></pre></div>
+<h3>Start Services</h3>
+<div class="highlight"><pre><code class="language-text" data-lang="text">$ sudo service avahi-daemon start
+$ sudo service netatalk start
+</code></pre></div>
+<p>Have these services start on boot:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">sudo update-rc.d avahi-daemon defaults
+sudo update-rc.d netatalk defaults
+</code></pre></div>
+<h3>Setting up Time Machine</h3>
+
+<p>Now that you have things setup on the Raspberry Pi, we just need to open up Time Machine and add our new disk.</p>
+
+<p><img src="/images/diy_time_capsule/time_machine_select.png" alt="Time Machine Select"></p>
+
+<p>Once selected, use your SSH credentials to connect.</p>
+
+<p><img src="/images/diy_time_capsule/time_machine_login.png" alt="Time Machine Login"></p>
+
+<h3>Viewing Backups</h3>
+
+<p>Once your first backup has completed you probably want to take a look at the files.  Open up Finder and click on the <code>raspberrypi</code> menu item under Shared.  Then click the Connect As button in the upper right corner and enter your login credentials to the Raspberry Pi.  This will allow you to browse the share which should look something like this:</p>
+
+<p><img src="/images/diy_time_capsule/time_machine_bundle.png" alt="Time Machine Bundle"></p>
+
+<p>On the share you&#39;ll see a <code>.sparsebundle</code> file, which is where your backup is stored as an image.  Double click on that file to mount the image.</p>
+
+<p><img src="/images/diy_time_capsule/time_machine_browse.png" alt="Time Machine Browse"></p>
+
+<p>With the image mounted you will see a <code>Time Machine Backups</code> menu item in Finder under the Devices section.</p>
+
+<h3>Spin Down Idle Drive</h3>
+
+<p>Because our server will be running 24 hours a day, it&#39;s a good idea to have the backup drive spin down when not in use.  The below commands will setup our drive to spin down after 30 minutes of no activity.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">$ sudo apt-get install hdparm
+$ sudo vim /etc/hdparm.conf
+
+# add this entry at the bottom
+command_line {
+  hdparm -S 240 /dev/sda
+}
+
+# restart server
+$ sudo reboot
+</code></pre></div>
+<h3>Sources</h3>
+
+<p>And that&#39;s it. Your DIY Time Capsule is complete.  I used information from the sources below:</p>
+
+<ul>
+<li><a href="http://outcoldman.com/en/archive/2014/11/09/ubuntu-as-home-server-part-3-afp-server">http://outcoldman.com/en/archive/2014/11/09/ubuntu-as-home-server-part-3-afp-server</a></li>
+<li><a href="http://netatalk.sourceforge.net/wiki/index.php/Install_Netatalk_3.1.7_on_Debian_7_Wheezy">http://netatalk.sourceforge.net/wiki/index.php/Install<em>Netatalk</em>3.1.7<em>on</em>Debian<em>7</em>Wheezy</a></li>
+<li><a href="http://ubuntuforums.org/showthread.php?t=2105755">http://ubuntuforums.org/showthread.php?t=2105755</a> (Steps 2 and 3)</li>
+<li><a href="http://www.havetheknowhow.com/Configure-the-server/Spin-down-idle-drives.html">http://www.havetheknowhow.com/Configure-the-server/Spin-down-idle-drives.html</a></li>
+</ul>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2015/06/27/mixing-ansible-roles-tasks/">
+          <span class="article-title">Mixing Ansible Roles and Tasks</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/08/02/ssh-ansible-host/">
+          <span class="article-title">SSH to Ansible host by hostname</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/05/05/vagrant-guest-commands/">
+          <span class="article-title">Running Commands on Vagrant Guest from Host</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

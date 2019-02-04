@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>SSH to Ansible host by hostname</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="linux,bash,ansible,scripting" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  SSH to Ansible host by hostname
+</h2>
+
+<p class="meta">
+  02 Aug 2015
+  
+    <a class="article-tag" href="/tags/linux">linux</a>
+  
+    <a class="article-tag" href="/tags/bash">bash</a>
+  
+    <a class="article-tag" href="/tags/ansible">ansible</a>
+  
+    <a class="article-tag" href="/tags/scripting">scripting</a>
+  
+</p>
+
+<div class="post">
+  <p>For my current project we have <a href="http://docs.ansible.com/">Ansible</a> deploy scripts for our handful of services to a set of development servers.  This has generally worked well, but occasionally we need to SSH directly to the server to debug an issue.  Ideally I&#39;d like to SSH to a server via it&#39;s Ansible hostname rather than having to look up its IP or machine name.</p>
+
+<p>To my knowledge this doesn&#39;t exist out of the box with Ansible, so I set about writing a simple Bash function to serve this purpose.</p>
+
+<p>Note that I&#39;m working with a few assumptions:</p>
+
+<ol>
+<li>The SSH user for each host is that same, <code>ansible</code> in my example.</li>
+<li>The hosts are defined in the <a href="http://docs.ansible.com/ansible/intro_inventory.html">default location</a> <code>/etc/ansible/hosts</code> or a file ending in <code>hosts</code> under the current working directory, e.g. <code>provisioning/ansible_hosts</code> or <code>provisioning/hosts</code>.</li>
+<li>Assumes SSH connection on port 22.</li>
+</ol>
+
+<h3>Script</h3>
+
+<p>In <code>~/.bashrc</code>:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash">ansible-ssh<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$1&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&quot;No hostname specified&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;usage: ansible-ssh [hostname] [user=ansible]&quot;</span><span class="p">;</span>
+    <span class="k">return</span> 1<span class="p">;</span>
+  <span class="k">fi</span>
+  <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$2&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nv">USER</span><span class="o">=</span><span class="s2">&quot;ansible&quot;</span>
+  <span class="k">else</span>
+    <span class="nv">USER</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
+  <span class="k">fi</span>
+
+  <span class="k">if</span> <span class="o">[</span> -e <span class="s1">&#39;/etc/ansible/hosts&#39;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nv">DIRECTORIES</span><span class="o">=</span><span class="s1">&#39;/etc/ansible .&#39;</span>
+  <span class="k">else</span>
+    <span class="nv">DIRECTORIES</span><span class="o">=</span><span class="s1">&#39;.&#39;</span>
+  <span class="k">fi</span>
+
+  <span class="nv">INVENTORY</span><span class="o">=</span><span class="sb">`</span>find <span class="nv">$DIRECTORIES</span> -name <span class="s1">&#39;*hosts&#39;</span> <span class="p">|</span> xargs<span class="sb">`</span>
+  <span class="nv">HOST</span><span class="o">=</span><span class="sb">`</span>cat <span class="nv">$INVENTORY</span> <span class="p">|</span> grep -A <span class="m">1</span> <span class="s2">&quot;\[$1\]&quot;</span> <span class="p">|</span> tail -1<span class="sb">`</span>
+  <span class="nb">command </span>ssh <span class="s2">&quot;$USER@$HOST&quot;</span>
+<span class="o">}</span>
+</code></pre></div>
+<p>Adding this to my bash config I can create an SSH session with the following:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">$ ansible-ssh testhost
+</code></pre></div>
+<p>To SSH with a specific user, just pass the user as the second argument:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">$ ansible-ssh testhost devuser
+</code></pre></div>
+<p>I&#39;m sure there may be more efficient ways to parse the hosts file and I&#39;m open to suggestion for improvement, but this has already been a time saver.</p>
+
+<p>For a future version I&#39;d like to extract to proper binary, instead of a bash function, and add some more features including:</p>
+
+<ul>
+<li>Support for non standard SSH port</li>
+<li>Support for dynamic inventories</li>
+<li>Configurable default user</li>
+</ul>
+
+<p>Have other ways you&#39;ve leveraged ansible artifacts to make dev tasks easier? Tweet at me <a href="https://twitter.com/calebwoods">@calebwoods</a>.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2015/06/27/mixing-ansible-roles-tasks/">
+          <span class="article-title">Mixing Ansible Roles and Tasks</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/05/05/vagrant-guest-commands/">
+          <span class="article-title">Running Commands on Vagrant Guest from Host</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/04/06/diy-time-capsule-raspberry-pi/">
+          <span class="article-title">DIY Time Capsule with a Raspberry Pi</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

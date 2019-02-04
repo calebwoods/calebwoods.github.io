@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Batch Resizing Images with Ruby</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="ruby,scripting" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Batch Resizing Images with Ruby
+</h2>
+
+<p class="meta">
+  01 Feb 2015
+  
+    <a class="article-tag" href="/tags/ruby">ruby</a>
+  
+    <a class="article-tag" href="/tags/scripting">scripting</a>
+  
+</p>
+
+<div class="post">
+  <p>Working with image files is a common task in web development, and many great tools exist for advanced image manipulation.  However, often all I need to do with a set of images is resize them to be more web friendly.</p>
+
+<h3>TL;DR</h3>
+
+<p>Here is the full <a href="https://gist.github.com/calebwoods/714731713935bd2b3625">gist</a>.</p>
+
+<h3>Resizing in Ruby</h3>
+
+<p>I starting looking at how I could build a generalized script to handle batch resizing in Ruby, being my preferred language for scripting.</p>
+
+<p>To handle the image manipulation I&#39;ll make use of the <a href="https://github.com/rmagick/rmagick">RMagick</a> gem which wraps the <a href="http://www.imagemagick.org/">ImageMagick</a> command line tool.</p>
+
+<p>To install RMagick and ImageMagick via Homebrew and Rubygems use the following commands:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>brew update <span class="o">&amp;&amp;</span> brew doctor
+<span class="nv">$ </span>brew install imagemagick
+<span class="nv">$ </span>gem install rmagick
+</code></pre></div>
+<h3>Ruby Executable</h3>
+
+<p>To make the script runnable without using the <code>ruby</code> command we&#39;ll create a file with a ruby <a href="http://en.wikipedia.org/wiki/Shebang_%28Unix%29">shebang</a>.</p>
+
+<p>I&#39;ve created mine in <code>~/.bin</code> which is added to my <code>$PATH</code> so the script can be executed from anywhere.  The file also needs to be executable using <a href="http://ss64.com/bash/chmod.html">chmod</a>.</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span><span class="nb">echo</span> <span class="s2">&quot;#!/usr/bin/ruby&quot;</span> &gt; ~/.bin/resize.rb
+<span class="nv">$ </span>chmod +x ~/.bin/resize.rb
+<span class="nv">$ </span><span class="nb">echo</span> <span class="s1">&#39;export PATH=&quot;~/.bin:$PATH&quot;&#39;</span> &gt;&gt; ~/.bash_profile
+</code></pre></div>
+<p><strong>Note</strong>: If you use Rbenv to manage your ruby versions you&#39;ll need to update your script to use <code>#!/usr/bin/env ruby</code> for your shebang.  See the <a href="https://github.com/sstephenson/rbenv/wiki/ruby-local-exec#why-is-it-deprecated">Rbenv wiki</a> for more info.</p>
+
+<h3>Resizing</h3>
+
+<p>The logic for resizing an image is pretty straight forward.  We just need to open the image using RMagick and call the <code>resize_to_fit</code> command, which will scale the image to fit the width in pixels while maintaining current aspect ratio.</p>
+
+<p>Because this is a dynamic script we will get the values for directory and width using <a href="http://blog.flatironschool.com/post/64043716616/a-short-explanation-of-argv">ARGV</a>.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="nb">require</span> <span class="s1">&#39;RMagick&#39;</span>
+<span class="nb">require</span> <span class="s1">&#39;pathname&#39;</span>
+
+<span class="vi">@directory</span> <span class="o">=</span> <span class="no">Pathname</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="no">ARGV</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span><span class="p">))</span>
+<span class="vi">@size</span>      <span class="o">=</span> <span class="no">ARGV</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="mi">1025</span> <span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">resize_image</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+  <span class="n">img</span> <span class="o">=</span> <span class="no">Magick</span><span class="o">::</span><span class="no">Image</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">first</span>
+
+  <span class="n">resized</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">resize_to_fit</span><span class="p">(</span><span class="vi">@size</span><span class="p">)</span>
+
+  <span class="n">path</span> <span class="o">=</span> <span class="vi">@directory</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;resized&#39;</span><span class="p">,</span> <span class="no">File</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">file</span><span class="p">))</span>
+  <span class="n">resized</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">do</span>
+    <span class="nb">self</span><span class="o">.</span><span class="n">quality</span> <span class="o">=</span> <span class="mi">100</span>
+  <span class="k">end</span>
+
+  <span class="c1"># free up RAM</span>
+  <span class="n">img</span><span class="o">.</span><span class="n">destroy!</span>
+  <span class="n">resized</span><span class="o">.</span><span class="n">destroy!</span>
+<span class="k">end</span>
+</code></pre></div>
+<h3>Processing a Batch</h3>
+
+<p>Now that we have a method for resizing images we need a way to collect images for resizing and iterate over them.  We can use the <a href="http://www.ruby-doc.org/core-2.2.0/Dir.html#method-c-glob">Dir.glob</a> method to get an Array of all the jpg, png, and gif images in the specified directory and then call <code>resize_image</code> for each.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="n">resize_dir</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="vi">@directory</span><span class="si">}</span><span class="s2">/resized&quot;</span>
+<span class="k">unless</span> <span class="no">File</span><span class="o">.</span><span class="n">directory?</span> <span class="n">resize_dir</span>
+  <span class="nb">puts</span> <span class="s2">&quot;Creating </span><span class="si">#{</span><span class="n">resize_dir</span><span class="si">}</span><span class="s2">/&quot;</span>
+  <span class="no">Dir</span><span class="o">.</span><span class="n">mkdir</span> <span class="n">resize_dir</span>
+<span class="k">end</span>
+
+<span class="n">files</span> <span class="o">=</span> <span class="no">Dir</span><span class="o">.</span><span class="n">glob</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="vi">@directory</span><span class="si">}</span><span class="s2">/*.{jpg,png,gif}&quot;</span>
+
+<span class="nb">puts</span> <span class="s2">&quot;Resizing </span><span class="si">#{</span><span class="n">files</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> images...&quot;</span>
+
+<span class="n">files</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">file</span><span class="o">|</span>
+  <span class="nb">puts</span> <span class="s2">&quot;Resizing </span><span class="si">#{</span><span class="n">file</span><span class="si">}</span><span class="s2">&quot;</span>
+  <span class="n">resize_image</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="nb">puts</span> <span class="s2">&quot;Finished resizing </span><span class="si">#{</span><span class="n">files</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> images&quot;</span>
+</code></pre></div>
+<h3>Using the Script</h3>
+
+<p>To use our new script we call it and pass a directory and image width.  Here we will create a batch of 150px thumbnails from the current directory.</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span><span class="nb">cd</span> ~/Desktop
+<span class="nv">$ </span>resize.rb . 150
+Resizing <span class="m">2</span> images...
+Resizing /Users/caleb/Desktop/avatar.jpg
+Resizing /Users/caleb/Desktop/header.png
+Finished resizing <span class="m">2</span> images
+</code></pre></div>
+<h3>Customizing</h3>
+
+<p>Obviously this type of script could be used to do more than just resize images.  Just take a look at the <a href="http://www.imagemagick.org/RMagick/doc/">RMagick docs</a> for ideas.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2015/05/05/vagrant-guest-commands/">
+          <span class="article-title">Running Commands on Vagrant Guest from Host</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/08/02/ssh-ansible-host/">
+          <span class="article-title">SSH to Ansible host by hostname</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/06/27/mixing-ansible-roles-tasks/">
+          <span class="article-title">Mixing Ansible Roles and Tasks</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

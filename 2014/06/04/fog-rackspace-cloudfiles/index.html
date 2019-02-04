@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Fog and Slow Rackspace Cloud Files Requests</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="ruby,debugging" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Fog and Slow Rackspace Cloud Files Requests
+</h2>
+
+<p class="meta">
+  04 Jun 2014
+  
+    <a class="article-tag" href="/tags/ruby">ruby</a>
+  
+    <a class="article-tag" href="/tags/debugging">debugging</a>
+  
+</p>
+
+<div class="post">
+  <p>Today I was working on fixing a performance bug for a project that uses the <a href="https://github.com/fog/fog">Fog gem</a> to access <a href="http://www.rackspace.com/cloud/files/">Rackspace&#39;s Cloud Files</a> API, and I made an interesting discovery that seemed worth sharing.</p>
+
+<p>For some background, the app I was working on has an API that accepts small image files that can be associated with each record. These images will then be returned with the record when accessed through the API.</p>
+
+<p>The issue I was having was that API requests to retrieve those records with the associated images were taking a really long time, especially the internal request to Cloud Files. This was strange as the images are only 5-15kb and Cloud Files and the app servers are located in the data center for this app.</p>
+
+<p>Doing some searching to see if others were having this problem, I came accross this <a href="https://github.com/fog/fog/issues/2714">Github issue</a> which helped me track down the problem area.</p>
+
+<p>In our app we had the following method to retrieve files:</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">remote_file</span><span class="p">(</span><span class="n">directory_name</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+  <span class="n">directory</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">directories</span><span class="o">.</span><span class="n">get</span> <span class="n">directory_name</span>
+  <span class="n">directory</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">get</span> <span class="n">file_name</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>This looks like a fine solution that many Fog examples use, however, there lies a critical performance issue in this code.  </p>
+
+<p>As the <a href="https://github.com/fog/fog/blob/master/lib/fog/rackspace/docs/storage.md#get-directory">Fog Rackspace documentation</a> points out, using <code>directories.get</code> will indeed return the directory.  But it also returns the meta data for the first <strong>10,000</strong> files in that directory. In our case the directory had over 10,000 files so we were returning all that extra meta data for every file retrieval.</p>
+
+<p>Thankfully, there is an easy solution. Just switch the code to use <code>directories.new</code>, and problem solved.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">remote_file</span><span class="p">(</span><span class="n">directory_name</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+  <span class="n">directory</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">directories</span><span class="o">.</span><span class="n">new</span> <span class="ss">key</span><span class="p">:</span> <span class="n">directory_name</span>
+  <span class="n">directory</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">get</span> <span class="n">file_name</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>In debugging this issue I am again reminded of the value of analyzing how a new library works when adding it to your project.  Just because code works when you bring in a gem doesn&#39;t mean you shouldn&#39;t throughly test and examine the side affects.</p>
+
+<p>On a side note, it is great to see that the community has improved the documentation regarding this issue. <a href="https://github.com/fog/fog/blob/8c1319703d77139c7f3b249c0bb105b975e6b5e0/lib/fog/rackspace/docs/storage.md#get-directory">Looking back</a> there was no information regarding <code>get</code> vs <code>new</code> when I first wrote that method.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2014/10/07/oracle-connection-hanging-ruby/">
+          <span class="article-title">Oracle connection hanging in Ruby</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/10/19/choosing-frontend-form-data-heavy-applications/">
+          <span class="article-title">Choosing a Frontend for Form and Data Heavy Applications</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/08/23/minimal-blogging-infrastructure/">
+          <span class="article-title">Minimal Blogging Infrastructure with Jekyll, Github, and Wercker</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

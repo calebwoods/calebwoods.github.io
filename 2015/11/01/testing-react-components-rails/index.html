@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Testing React Components in Rails</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="rails,testing,react" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Testing React Components in Rails
+</h2>
+
+<p class="meta">
+  01 Nov 2015
+  
+    <a class="article-tag" href="/tags/rails">rails</a>
+  
+    <a class="article-tag" href="/tags/testing">testing</a>
+  
+    <a class="article-tag" href="/tags/react">react</a>
+  
+</p>
+
+<div class="post">
+  <p>As mentioned in a <a href="/2015/10/19/choosing-frontend-form-data-heavy-applications/">previous post</a>, part of my current learning and experimentation is finding ways to mix a &quot;traditional&quot; Rails application with Javascript components.</p>
+
+<p>Recently, I&#39;ve been further exploring <a href="https://facebook.github.io/react/">React</a>, which I really like, but I couldn&#39;t find a simple way to unit test components in a Rails app using the <a href="http://guides.rubyonrails.org/asset_pipeline.html">Asset Pipeline</a>. The benefit I&#39;m looking for is being able to do a bulk of the frontend with server side rendered views as they are easy to build quickly and add React components for parts of the interface that need it.</p>
+
+<p>Most React testing examples assume a <a href="http://requirejs.org/docs/commonjs.html">CommonJS</a> way of structuring and requiring Javascript files.  Strangely,  or maybe to increase adoption, the  <a href="https://github.com/reactjs/react-rails">react-rails</a> gem integrates with the Asset Pipeline and I wanted to find a testing solution to match.</p>
+
+<h3>Component</h3>
+
+<p>As an example I&#39;ll implement the CheckboxWithLabel component used in the <a href="http://facebook.github.io/jest/">Jest</a> <a href="https://facebook.github.io/jest/docs/tutorial-react.html">React tutorial</a>.</p>
+<div class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">// app/assets/javascripts/components/checkbox_with_label.js.jsx</span>
+<span class="kd">var</span> <span class="nx">CheckboxWithLabel</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
+
+  <span class="nx">getInitialState</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">{</span> <span class="nx">isChecked</span><span class="o">:</span> <span class="kc">false</span> <span class="p">}</span>
+  <span class="p">},</span>
+
+  <span class="nx">onChange</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">setState</span><span class="p">({</span><span class="nx">isChecked</span><span class="o">:</span> <span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">isChecked</span><span class="p">});</span>
+  <span class="p">},</span>
+
+  <span class="nx">render</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">label</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">isChecked</span> <span class="o">?</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">labelOn</span> <span class="o">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">labelOff</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="p">(</span>
+      <span class="o">&lt;</span><span class="nx">label</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">input</span>
+          <span class="nx">type</span><span class="o">=</span><span class="s2">&quot;checkbox&quot;</span>
+          <span class="nx">checked</span><span class="o">=</span><span class="p">{</span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">isChecked</span><span class="p">}</span>
+          <span class="nx">onChange</span><span class="o">=</span><span class="p">{</span><span class="k">this</span><span class="p">.</span><span class="nx">onChange</span><span class="p">}</span>
+        <span class="o">/&gt;</span>
+        <span class="p">{</span><span class="nx">label</span><span class="p">}</span>
+      <span class="o">&lt;</span><span class="err">/label&gt;</span>
+    <span class="p">);</span>
+  <span class="p">}</span>
+
+<span class="p">});</span>
+</code></pre></div>
+<h3>Test Setup</h3>
+
+<p>Rather than using <a href="http://facebook.github.io/jest/">Jest</a> for our tests I&#39;ll use <a href="http://jasmine.github.io/">Jasmine</a>, which Jest is built on but is easier to integrate with Rails using the <a href="https://github.com/searls/jasmine-rails">jasmine-rails</a> gem.</p>
+
+<p>After adding <code>jasmine-rails</code> to the Gemfile and running the installer, <code>rails generate jasmine_rails:install</code>, we just need to make a couple changes.</p>
+
+<p>First we need to configure <code>react-rails</code> to include the <code>TestUtils</code> addon in <code>config/application.rb</code>.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="c1"># config/appliction.rb</span>
+<span class="k">module</span> <span class="nn">ReactTesting</span>
+  <span class="k">class</span> <span class="nc">Application</span> <span class="o">&lt;</span> <span class="no">Rails</span><span class="o">::</span><span class="no">Application</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">react</span><span class="o">.</span><span class="n">addons</span> <span class="o">=</span> <span class="kp">true</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>To enable using the JSX preprocessor in our test we simply need to modify the <code>spec_files</code> matcher in <code>spec/javascripts/support/jasmine.yml</code>.</p>
+<div class="highlight"><pre><code class="language-yaml" data-lang="yaml"><span class="l-Scalar-Plain">spec_files</span><span class="p-Indicator">:</span>
+  <span class="p-Indicator">-</span> <span class="s">&quot;**/*[Ss]pec.{js.jsx,js,jsx}&quot;</span>
+</code></pre></div>
+<p>If you want to support coffee script in your tests as well, you can use something like:</p>
+<div class="highlight"><pre><code class="language-yaml" data-lang="yaml"><span class="l-Scalar-Plain">spec_files</span><span class="p-Indicator">:</span>
+  <span class="p-Indicator">-</span> <span class="s">&quot;**/*[Ss]pec.{js.jsx.coffee,js.jsx,js.coffee,js,jsx,coffee}&quot;</span>
+</code></pre></div>
+<p>Also, to force the use of <a href="http://phantomjs.org/">PhantomJS</a> 2.x which is already installed on my laptop we need to add:</p>
+<div class="highlight"><pre><code class="language-yaml" data-lang="yaml"><span class="l-Scalar-Plain">use_phantom_gem</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">false</span>
+</code></pre></div>
+<p>You&#39;ll also want to make sure your CI server is using PhantomJS 2.x.  For <a href="https://travis-ci.com/">Travis CI</a> just add  the following to your <code>.travis.yml</code> file.</p>
+<div class="highlight"><pre><code class="language-yaml" data-lang="yaml"><span class="l-Scalar-Plain">before_install</span><span class="p-Indicator">:</span>
+  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">wget https://s3.amazonaws.com/travis-phantomjs/phantomjs-2.0.0-ubuntu-12.04.tar.bz2</span>
+  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">tar -xjf phantomjs-2.0.0-ubuntu-12.04.tar.bz2</span>
+  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">export PATH=$PWD:$PATH</span>
+</code></pre></div>
+<p>Now on to writing our test.</p>
+
+<h3>Test</h3>
+
+<p>Our test will have two assertions. First to check the initial test is correct and a second after simulating a change.</p>
+<div class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">// spec/javascripts/components/checkbox_with_label_spec.js.jsx</span>
+<span class="kd">var</span> <span class="nx">TestUtils</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">addons</span><span class="p">.</span><span class="nx">TestUtils</span>
+
+<span class="nx">describe</span><span class="p">(</span><span class="s1">&#39;CheckboxWithLabel&#39;</span><span class="p">,</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+
+  <span class="nx">it</span><span class="p">(</span><span class="s1">&#39;changes the text after click&#39;</span><span class="p">,</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// Render a checkbox with label in the document</span>
+    <span class="kd">var</span> <span class="nx">checkbox</span> <span class="o">=</span> <span class="nx">TestUtils</span><span class="p">.</span><span class="nx">renderIntoDocument</span><span class="p">(</span>
+      <span class="o">&lt;</span><span class="nx">CheckboxWithLabel</span> <span class="nx">labelOn</span><span class="o">=</span><span class="s2">&quot;On&quot;</span> <span class="nx">labelOff</span><span class="o">=</span><span class="s2">&quot;Off&quot;</span> <span class="o">/&gt;</span>
+    <span class="p">);</span>
+
+    <span class="kd">var</span> <span class="nx">checkboxNode</span> <span class="o">=</span> <span class="nx">ReactDOM</span><span class="p">.</span><span class="nx">findDOMNode</span><span class="p">(</span><span class="nx">checkbox</span><span class="p">);</span>
+
+    <span class="c1">// Verify that it&#39;s Off by default</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="nx">checkboxNode</span><span class="p">.</span><span class="nx">textContent</span><span class="p">).</span><span class="nx">toEqual</span><span class="p">(</span><span class="s1">&#39;Off&#39;</span><span class="p">);</span>
+
+    <span class="c1">// Simulate a click and verify that it is now On</span>
+    <span class="nx">TestUtils</span><span class="p">.</span><span class="nx">Simulate</span><span class="p">.</span><span class="nx">change</span><span class="p">(</span>
+      <span class="nx">TestUtils</span><span class="p">.</span><span class="nx">findRenderedDOMComponentWithTag</span><span class="p">(</span>
+        <span class="nx">checkbox</span><span class="p">,</span>
+        <span class="s1">&#39;input&#39;</span>
+      <span class="p">)</span>
+    <span class="p">);</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="nx">checkboxNode</span><span class="p">.</span><span class="nx">textContent</span><span class="p">).</span><span class="nx">toEqual</span><span class="p">(</span><span class="s1">&#39;On&#39;</span><span class="p">);</span>
+  <span class="p">});</span>
+
+<span class="p">});</span>
+</code></pre></div>
+<p>This matches the sample test is from the <a href="https://facebook.github.io/jest/docs/tutorial-react.html">Jest tutorial</a>.  Although it should probably be noted we will not have access to Jest&#39;s <a href="https://facebook.github.io/jest/docs/mock-functions.html#content">Automatic Mocking</a> feature as we are using Jasmine instead.</p>
+
+<p>If we want to avoid declaring the <code>TestUtils</code> variable in each file we can extract it as a helper.</p>
+<div class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">// spec/javascripts/helpers/react_helper.js</span>
+<span class="nb">window</span><span class="p">.</span><span class="nx">TestUtils</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">addons</span><span class="p">.</span><span class="nx">TestUtils</span>
+</code></pre></div>
+<h3>Running Tests</h3>
+
+<p>Now to run tests we have two options: Rake task and browser.</p>
+
+<h4>Rake task</h4>
+
+<p>The <code>jasmine-rails</code> gem includes a Rake task <code>spec:javascripts</code>.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">$ bundle exec rake spec:javascripts
+Starting...
+
+Finished
+-----------------
+1 spec, 0 failures in 0.023s.
+
+ConsoleReporter finished
+</code></pre></div>
+<p>You can also configure this task to run as part of the default rake task.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="c1"># Rakefile</span>
+<span class="n">task</span> <span class="ss">:default</span> <span class="o">=&gt;</span> <span class="o">[</span> <span class="s1">&#39;spec:javascripts&#39;</span> <span class="o">]</span>
+</code></pre></div>
+<h4>Browser</h4>
+
+<p>Another benefit with the <code>jasmine-rails</code> gem is that it configures and mounts the Jasmine runner at <code>/specs</code> in your Rails app.</p>
+
+<p><img src="/images/jasmine_in_browser.png" alt="Jasmine Runner in Browser"></p>
+
+<p>This means using can easily stick a <code>debugger</code> statement in your test and use the Chrome web inspector to step through your tests.</p>
+
+<h3>Conclusion</h3>
+
+<p>Let&#39;s evaluate what we have.</p>
+
+<p>Pros:</p>
+
+<ul>
+<li>Simple setup with existing tools
+
+<ul>
+<li><a href="http://reactjsnews.com/setting-up-rails-for-react-and-jest/">Don&#39;t have to install npm packages</a></li>
+<li>Still using the Assets Pipeline</li>
+</ul></li>
+<li>Easy to run tests via Rake task (for CI) and browser (for debugging)</li>
+</ul>
+
+<p>Cons:</p>
+
+<ul>
+<li>Not using Jest
+
+<ul>
+<li><a href="https://facebook.github.io/jest/docs/automatic-mocking.html#content">Automatic Mocking</a> would seem to be the biggest loss</li>
+</ul></li>
+</ul>
+
+<p>This solution does assume you want to keep using the Asset Pipeline, but I&#39;m guessing for most Rails apps that&#39;s the easiest way to get started with React and it follows the style of the <code>react-rails</code> gem.</p>
+
+<p>If you&#39;d like to see the full running code, I&#39;ve created a minimal sample application at <a href="https://github.com/calebwoods/react_testing">https://github.com/calebwoods/react_testing</a>.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2019/02/02/intermittent-offline-system-tests/">
+          <span class="article-title">Intermittent Offline System Tests</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2017/03/08/testing-apis-json-schema/">
+          <span class="article-title">Testing Rails APIs with JSON Schema</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2015/02/23/poltergeist-angular-rails/">
+          <span class="article-title">Poltergeist with Rails and Angular</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Static Lists: Database Table, Module, or Enums</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="ruby,rails,database" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Static Lists: Database Table, Module, or Enums
+</h2>
+
+<p class="meta">
+  03 Apr 2014
+  
+    <a class="article-tag" href="/tags/ruby">ruby</a>
+  
+    <a class="article-tag" href="/tags/rails">rails</a>
+  
+    <a class="article-tag" href="/tags/database">database</a>
+  
+</p>
+
+<div class="post">
+  <p>In my experience building web applications I have seen the need for a pattern to solve the problem of static lists. By static lists I mean things like: US states, name prefixes, roles, etc.</p>
+
+<p>For comparison we will look at three solutions to solve this problem for a Rails app. Our example will be a <code>Person</code> object with a list of greetings options: Hi, Hello, Dear.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">class</span> <span class="nc">Person</span> <span class="o">&lt;</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Base</span>
+<span class="k">end</span>
+</code></pre></div>
+<h3>Database Table</h3>
+
+<p>In a Ruby on Rails application, adding a new database table is easy and makes adding new greetings to a list very straightforward. If we implemented a <code>Greeting</code> ActiveRecord object we might end up with some code like the following.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="c1"># app/models/person.rb</span>
+<span class="k">class</span> <span class="nc">Person</span> <span class="o">&lt;</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Base</span>
+  <span class="n">belongs_to</span> <span class="ss">:greeting</span>
+
+  <span class="n">validates</span> <span class="ss">:greeting</span><span class="p">,</span> <span class="ss">presence</span><span class="p">:</span> <span class="kp">true</span>
+
+  <span class="n">delegate</span> <span class="ss">:value</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="ss">:greeting</span><span class="p">,</span> <span class="ss">prefix</span><span class="p">:</span> <span class="kp">true</span>
+<span class="k">end</span>
+
+<span class="c1"># app/models/greeting.rb</span>
+<span class="k">class</span> <span class="nc">Greeting</span> <span class="o">&lt;</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Base</span>
+  <span class="n">has_many</span> <span class="ss">:people</span>
+
+  <span class="n">validates</span> <span class="ss">:value</span><span class="p">,</span> <span class="ss">presence</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">uniqueness</span><span class="p">:</span> <span class="kp">true</span>
+<span class="k">end</span>
+</code></pre></div>
+<h4>Pros</h4>
+
+<ul>
+<li>Easy to implement</li>
+<li>Can add more greetings without redeploying app</li>
+</ul>
+
+<h4>Cons</h4>
+
+<ul>
+<li>Person tests will require a <code>Greeting</code> object to be created</li>
+<li>Displaying form options require database query</li>
+</ul>
+
+<h3>Module</h3>
+
+<p>The concept of a greeting and its associated validations is really a discreet concept, and it would be nice to isolate its implementation from our <code>Person</code> class.</p>
+
+<p>This list is not expected to change much if ever we like to avoid querying the database to get the list of greetings or the display the value for a <code>Person</code> instance.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="c1"># app/models/person.rb</span>
+<span class="k">class</span> <span class="nc">Person</span> <span class="o">&lt;</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Base</span>
+  <span class="kp">include</span> <span class="no">Greeting</span>
+<span class="k">end</span>
+
+<span class="c1"># app/models/static_value.rb</span>
+<span class="no">StaticValue</span> <span class="o">=</span> <span class="no">Stuct</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="ss">:id</span><span class="p">,</span> <span class="ss">:value</span><span class="p">)</span>
+
+<span class="c1"># app/models/concerns/greeting.rb</span>
+<span class="k">module</span> <span class="nn">Greeting</span>
+  <span class="kp">extend</span> <span class="no">ActiveSupport</span><span class="o">::</span><span class="no">Concern</span>
+
+  <span class="no">Hi</span>    <span class="o">=</span> <span class="no">StaticValue</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Hi&#39;</span><span class="p">)</span>
+  <span class="no">Hello</span> <span class="o">=</span> <span class="no">StaticValue</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;Hello&#39;</span><span class="p">)</span>
+  <span class="no">Dear</span>  <span class="o">=</span> <span class="no">StaticValue</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;Dear&#39;</span><span class="p">)</span>
+  <span class="no">Other</span> <span class="o">=</span> <span class="no">StaticValue</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;Other&#39;</span><span class="p">)</span>
+
+  <span class="no">Collection</span> <span class="o">=</span> <span class="nb">constants</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">const_sym</span><span class="o">|</span>
+    <span class="nb">const_get</span><span class="p">(</span><span class="n">const_sym</span><span class="p">)</span>
+  <span class="k">end</span>
+  <span class="no">FormOptions</span> <span class="o">=</span> <span class="no">Collection</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">greeting</span><span class="o">|</span>
+    <span class="o">[</span> <span class="n">greeting</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">greeting</span><span class="o">.</span><span class="n">id</span> <span class="o">]</span>
+  <span class="k">end</span>
+  <span class="no">All</span> <span class="o">=</span> <span class="no">Collection</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="o">&amp;</span><span class="ss">:id</span><span class="p">)</span>
+
+  <span class="n">included</span> <span class="k">do</span>
+    <span class="n">validates</span> <span class="ss">:greeting_id</span><span class="p">,</span> <span class="ss">presence</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span>
+                            <span class="ss">inclusion</span><span class="p">:</span> <span class="p">{</span> <span class="k">in</span><span class="p">:</span> <span class="no">Greeting</span><span class="o">::</span><span class="no">All</span> <span class="p">}</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">greeting</span>
+    <span class="no">Greeting</span><span class="o">::</span><span class="no">Collection</span><span class="o">.</span><span class="n">detect</span> <span class="k">do</span> <span class="o">|</span><span class="n">greeting</span><span class="o">|</span>
+      <span class="n">greeting</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">greeting_id</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">greeting_value</span>
+    <span class="k">if</span> <span class="n">greeting</span> <span class="o">==</span> <span class="no">Greeting</span><span class="o">::</span><span class="no">Other</span>
+      <span class="n">greeting_other</span>
+    <span class="k">else</span>
+      <span class="n">greeting</span><span class="o">.</span><span class="n">value</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>This solution is admittedly more code, but we also have included more features. In this version we have implemented support for a <code>greeting_other</code> database column which could store custom greetings entered by the user.</p>
+
+<p>We have also added the <code>FormOptions</code> constant which can be used in a form builder to build a <code>&lt;select&gt;</code> with the valid values for a greeting. Most importantly, we make zero database calls to get these values which means faster tests with less setup and less load in our application. Speaking of testing, the tests for this &quot;Module&quot; pattern is a great place to use <a href="https://www.relishapp.com/rspec/rspec-core/docs/example-groups/shared-examples">Rspec shared_examples</a>.</p>
+
+<p>Because we are storing our reference to a greeting in a <code>greeting_id</code> on the <code>Person</code> table, it would be simple refactor to the &quot;Database Table&quot; pattern in the future.</p>
+
+<h4>Pros</h4>
+
+<ul>
+<li>No database queries</li>
+<li>Easier test setup</li>
+<li>Supports form builders</li>
+<li>Easy to convert to table</li>
+<li>Supports <code>Other</code> option</li>
+</ul>
+
+<h4>Cons</h4>
+
+<ul>
+<li>Changes require redeploying application</li>
+<li>More lines of code</li>
+</ul>
+
+<h3>Enums</h3>
+
+<p>The module pattern I have shown above is similar to the <a href="http://en.wikipedia.org/wiki/Enumerated_type">enum</a> support that many programming languages have built into the language. While Ruby does not have native support enums, a new <a href="http://edgeguides.rubyonrails.org/4_1_release_notes.html#active-record-enums">feature</a> in Rails 4.1 gives us an implement of enums to use with ActiveRecord.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">class</span> <span class="nc">Person</span> <span class="o">&lt;</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Base</span>
+  <span class="n">enum</span> <span class="ss">greeting</span><span class="p">:</span> <span class="p">{</span> <span class="ss">hi</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="ss">hello</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="ss">dear</span><span class="p">:</span> <span class="mi">3</span> <span class="p">}</span>
+
+  <span class="n">validates</span> <span class="ss">:greeting</span><span class="p">,</span> <span class="ss">presence</span><span class="p">:</span> <span class="kp">true</span>
+
+  <span class="k">def</span> <span class="nf">greeting_value</span>
+    <span class="n">greeting</span><span class="o">.</span><span class="n">capitalize</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>Using the new ActiveRecord enums has the advantage of creating dynamic methods like <code>hi!</code> and <code>hi?</code> to set the value of <code>greeting</code> and check that the value matches a specific enum value.</p>
+
+<p>To use these enums in a form helper we can do a map of the hash we get from the <code>Person.greetings</code> method.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="no">Person</span><span class="o">.</span><span class="n">greetings</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">greeting</span><span class="p">,</span> <span class="nb">id</span><span class="o">|</span>
+  <span class="o">[</span><span class="n">greeting</span><span class="o">.</span><span class="n">capitalize</span><span class="p">,</span> <span class="nb">id</span><span class="o">]</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>This solution ends up being the smallest amount of code. Although we do have the inconvience of our form helper not being defined in just one place, but that could be addressed with custom class method.</p>
+
+<h4>Pros</h4>
+
+<ul>
+<li>Simple implementation</li>
+<li>Dynamic method creation</li>
+<li>No database queries</li>
+</ul>
+
+<h4>Cons</h4>
+
+<ul>
+<li>Changes require redeploying application</li>
+<li>No form builder support</li>
+</ul>
+
+<h3>Conclusion</h3>
+
+<p>As we have compared these patterns for static lists, we can see that there are contexts in which each solution will shine.</p>
+
+<p>A &quot;Database Table&quot; is easy to create and allows live changes, the &quot;Module&quot; pattern is flexible with good support for introspection and extending with blocks, and ActiveRecord enums are a simple solution with good support for representing states of an object.</p>
+
+<p>With that said, I have found that the &quot;Module&quot; pattern is a good place to start, however, I&#39;ll be curious to see how <a href="http://edgeguides.rubyonrails.org/4_1_release_notes.html#active-record-enums">ActiveRecord enums</a> evolves over time and look forward to trying it on a project.</p>
+
+<p>If you would like to compare these implementations in more depth I have put together a <a href="https://github.com/calebwoods/static_lists_post">sample app</a> which includes tests for each solution.</p>
+
+<hr>
+
+<p><strong>Edit</strong> in response to this blog post, <a href="https://twitter.com/ravinggenius">@ravinggenius</a> put together a <a href="https://gist.github.com/ravinggenius/9983704">gist</a> of how you could build an abstraction to simplify &quot;Module&quot; pattern and reduce boiler plate code. This could probably be taken a bit further to also create helper methods like ActiveRecord enums provides.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2014/12/23/fix-partial-rails-migration/">
+          <span class="article-title">Fix Partial Rails Migration</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/26/ruby-database-sharding-sequel/">
+          <span class="article-title">Ruby Database Sharding with Sequel</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/07/oracle-connection-hanging-ruby/">
+          <span class="article-title">Oracle connection hanging in Ruby</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>

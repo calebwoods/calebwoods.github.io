@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible" />
+    <title>Poltergeist with Rails and Angular</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+    <meta content="ruby,rails,testing,angularjs" name="keywords" />
+    <link href="//brick.a.ssl.fastly.net/Noto+Sans:400,400i,700" rel="stylesheet" />
+    <link href="/css/syntax.css" rel="stylesheet" />
+    <link href="/css/main.css" rel="stylesheet" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="overlay">
+        <div class="site">
+          <h1 class="title">
+            <a href="/">
+              <div class="avatar"></div>
+              Caleb Woods</a>
+          </h1>
+          <div class="extra">
+            <a href="/feed.xml">feed</a>
+            <a href="#contact">contact</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="site">
+
+      <span class="back"><a href="/">Home</a> ></span>
+<h2>
+  Poltergeist with Rails and Angular
+</h2>
+
+<p class="meta">
+  23 Feb 2015
+  
+    <a class="article-tag" href="/tags/ruby">ruby</a>
+  
+    <a class="article-tag" href="/tags/rails">rails</a>
+  
+    <a class="article-tag" href="/tags/testing">testing</a>
+  
+    <a class="article-tag" href="/tags/angularjs">angularjs</a>
+  
+</p>
+
+<div class="post">
+  <p>This past week I worked on converting a Rails and Angular application that was using Selenium as the driver for <a href="https://github.com/codegram/spinach">Spinach</a>/<a href="https://github.com/jnicklas/capybara">Capybara</a> tests over to using <a href="https://github.com/teampoltergeist/poltergeist">Poltergeist</a>.</p>
+
+<p>The change was motivated by the fact that our Spinach tests using Selenium where taking an average of 4 minutes to run.  That&#39;s not terrible, but could definitely be improved.  Also, I wanted to look into running tests in parallel which would be easier with a headless driver.</p>
+
+<p><strong>Spoiler alert</strong>: 2x speed improvement ahead.</p>
+
+<h3>Getting PhantomJS Running</h3>
+
+<p>When I first switched our tests over to using Poltergeist I noticed that even though links where being clicked ui-router was not transitioning to the new state.</p>
+
+<p>After some digging I realized the issue was that PhantomJS does not support <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind">Function.prototype.bind</a> in 1.9.x versions and our app had code in the <a href="https://github.com/angular-ui/ui-router/wiki#resolve">resolve</a> section of our states was using <code>bind</code>.  When calling <code>bind</code> failed the state transition would be halted.</p>
+
+<p>The solution is to add a polyfill such as <a href="https://github.com/kdimatteo/bind-polyfill">this bower package</a> which can be installed using <a href="https://rails-assets.org/">Rails Assets</a>.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="c1"># Gemfile</span>
+<span class="n">source</span> <span class="s1">&#39;https://rails-assets.org&#39;</span>
+<span class="n">gem</span> <span class="s1">&#39;rails-assets-bind-polyfill&#39;</span>
+
+<span class="c1"># application.js</span>
+<span class="sr">//</span><span class="o">=</span> <span class="nb">require</span> <span class="n">bind</span><span class="o">-</span><span class="n">polyfill</span>
+</code></pre></div>
+<h3>Throwing Errors</h3>
+
+<p>By default Poltergeist does not re-raise errors, however, having this turned on is usually helpful in finding errors.  Angular makes this a challenge though: instead of throwing errors it catches them using the <code>$exceptionHandler</code> service and logs them.  If we want to be able to re-raise errors we will need to load an extension for Poltergeist.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="c1"># features/support/env.rb</span>
+<span class="no">Capybara</span><span class="o">.</span><span class="n">register_driver</span> <span class="ss">:poltergeist</span> <span class="k">do</span> <span class="o">|</span><span class="n">app</span><span class="o">|</span>
+  <span class="no">Capybara</span><span class="o">::</span><span class="no">Poltergeist</span><span class="o">::</span><span class="no">Driver</span><span class="o">.</span><span class="n">new</span><span class="p">(</span>
+    <span class="n">app</span><span class="p">,</span>
+    <span class="ss">extensions</span><span class="p">:</span> <span class="o">[</span> <span class="s1">&#39;features/support/angular_errors.js&#39;</span> <span class="o">]</span><span class="p">,</span>
+    <span class="ss">js_errors</span><span class="p">:</span>   <span class="kp">true</span>
+  <span class="p">)</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>In our extension we can redefine the <code>error</code> function on the <code>$log</code> service to instead throw an exception.  Original script taken from the <a href="http://eng.localytics.com/a-year-on-angular-on-rails/">Localytics blog</a>.</p>
+
+<p>I also added void implementations for <code>$log.info</code> and <code>$log.debug</code> to clean up test output as our app logs every state transition with debugging information.</p>
+<div class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">// features/support/angular_errors.js</span>
+<span class="nb">window</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">$injector</span> <span class="o">=</span> <span class="nx">angular</span><span class="p">.</span><span class="nx">element</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="nx">injector</span><span class="p">();</span>
+  <span class="kd">var</span> <span class="nx">$log</span> <span class="o">=</span> <span class="nx">$injector</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;$log&#39;</span><span class="p">);</span>
+
+  <span class="c1">// Raise Angular errors</span>
+  <span class="nx">$log</span><span class="p">.</span><span class="nx">error</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span> <span class="k">throw</span><span class="p">(</span><span class="nx">error</span><span class="p">);</span> <span class="p">};</span>
+
+  <span class="c1">// Suppress Angular Logging</span>
+  <span class="nx">$log</span><span class="p">.</span><span class="nx">info</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{};</span>
+  <span class="nx">$log</span><span class="p">.</span><span class="nx">debug</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{};</span>
+<span class="p">};</span>
+</code></pre></div>
+<h3>Debugging</h3>
+
+<p>One thing that&#39;s always hard with a headless browser is to see what&#39;s going on when the test is interacting with the page.  For basic debugging, I&#39;ve found that taking a screenshot using the <code>save_screenshot</code> method while in a <a href="http://pryrepl.org/">Pry</a> session of stepping through your tests works well.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="n">save_screenshot</span><span class="p">(</span><span class="s1">&#39;/Users/caleb/Desktop/debug.png&#39;</span><span class="p">,</span> <span class="ss">full</span><span class="p">:</span> <span class="kp">true</span><span class="p">)</span>
+</code></pre></div>
+<p>For debugging tests that don&#39;t have driver specific issues I still like to use Selenium so that you can click around the page.  So I created a hook to switch the driver any time the <code>@selenium</code> tag is added to a scenario.</p>
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="no">Spinach</span><span class="o">.</span><span class="n">hooks</span><span class="o">.</span><span class="n">on_tag</span><span class="p">(</span><span class="s1">&#39;selenium&#39;</span><span class="p">)</span> <span class="k">do</span>
+  <span class="no">Capybara</span><span class="o">.</span><span class="n">current_driver</span> <span class="o">=</span> <span class="ss">:selenium</span>
+<span class="k">end</span>
+</code></pre></div>
+<h3>2x Speed Improvement</h3>
+
+<p>After fixing a couple of tests that used features of Capybara specific to Selenium and some issues with <a href="https://github.com/teampoltergeist/poltergeist#mouseeventfailed-errors">mouse events</a>, I was able to run the entire test suite with Poltergeist.</p>
+
+<p>With these changes in place running Spinach tests, which took 4 minutes using Selenium, now took just 2 minutes.  Well worth the effort.</p>
+
+<p><strong>Edit 2015-02-24</strong>: Today after upgrading <a href="http://phantomjs.org/release-2.0.html">PhantomJS to version 2.0.0</a> I&#39;m seeing even more remarkable speed improvements.  The same Spinach tests now run in about 75 seconds.  Overall a 3.2x improvement from using Selenium.</p>
+
+</div>
+
+<div class="related-posts">
+  <h4>Related Posts</h4>
+
+  <ul>
+    
+      <li>
+        <a href="/2015/10/19/choosing-frontend-form-data-heavy-applications/">
+          <span class="article-title">Choosing a Frontend for Form and Data Heavy Applications</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2019/02/02/intermittent-offline-system-tests/">
+          <span class="article-title">Intermittent Offline System Tests</span>
+        </a>
+      </li>
+    
+      <li>
+        <a href="/2017/03/08/testing-apis-json-schema/">
+          <span class="article-title">Testing Rails APIs with JSON Schema</span>
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+
+      <div class="footer" id="contact">
+        <p>
+          &copy; 2013 - 2019 Caleb Woods. All Right Reserved.
+        </p>
+        <div class="contact">
+          <p>
+            <span>Caleb Woods</span><span>Software Craftsman</span><span>caleb@calebwoods.com</span>
+          </p>
+        </div>
+        <div class="contact">
+          <p>
+            <a href="https://github.com/calebwoods">github.com/calebwoods</a>
+            <a href="https://medium.com/@calebwoods">medium.com/@calebwoods</a>
+            <a href="https://twitter.com/calebwoods">twitter.com/calebwoods</a>
+            <a href="https://www.linkedin.com/in/calebwoods">linkedin.com/in/calebwoods</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create', 'UA-49249459-1', 'calebwoods.com');ga('send', 'pageview');
+    </script>
+  </body>
+</html>
